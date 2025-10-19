@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
 import "./App.css";
+import Home from "./Home";
 
 export default function App() {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState("");
+  const [authenticated, setAuthenticated] = useState(() => {
+    return localStorage.getItem("scoreSyncAuth") === "true";
+  });
 
-  // ✅ Check backend once and log to console
+  // Check backend once and log to console
   useEffect(() => {
     fetch("http://localhost:5050/api/health")
       .then((r) => r.json())
@@ -34,12 +38,38 @@ export default function App() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Request failed");
 
-      setMsg(data?.message || (mode === "login" ? "Login successful" : "Registered!"));
+      setMsg(
+        data?.message || (mode === "login" ? "Login successful" : "Registered!")
+      );
+
+      // On successful login, mark authenticated and persist
+      if (mode === "login") {
+        setAuthenticated(true);
+        localStorage.setItem("scoreSyncAuth", "true");
+        localStorage.setItem("scoreSyncEmail", email);
+      }
+
       if (mode === "register") setMode("login");
     } catch (err) {
       setMsg(err.message || "Something went wrong");
     }
   };
+
+  const handleLogout = () => {
+    setAuthenticated(false);
+    localStorage.removeItem("scoreSyncAuth");
+    localStorage.removeItem("scoreSyncEmail");
+    setEmail("");
+    setPassword("");
+    setMode("login");
+    setMsg("");
+  };
+
+  // If authenticated, render Home
+  if (authenticated) {
+    const storedEmail = localStorage.getItem("scoreSyncEmail") || "";
+    return <Home onLogout={handleLogout} email={storedEmail} />;
+  }
 
   return (
     <div className="container">
