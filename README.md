@@ -48,10 +48,12 @@ PORT=5050
 
 Running the Project
 
-	•	You will need to have 2 terminals running at the same time
-        -One for the backend (run this first)
-        -One for the frontend
-
+	•	The backend and frontend have been configured to start in unison.
+		Upon "cd" into /score-sync, the npm start command can be run to star
+		both the front and backend.
+		-If errors are returned, attempt to run "npm install" in the /score-sync
+		folder.
+		
     • BACKEND TERMINAL
         Make sure you are in the 'backend' directory of the project and run:
         npm run dev
