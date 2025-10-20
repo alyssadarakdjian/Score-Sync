@@ -73,6 +73,7 @@ export default function App() {
 
   return (
     <div className="container">
+      <div className="brand">score-sync</div>
       <div className="card">
         <h1>{mode === "login" ? "Login" : "Register"}</h1>
 

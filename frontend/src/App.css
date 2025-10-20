@@ -6,6 +6,19 @@ body {
   padding: 0;
 }
 
+.brand {
+  font-size: 50px;
+  position: fixed;
+  top: 12px;
+  left: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  z-index: 50;
+}
+
 .container {
   min-height: 100vh;
   display: grid;
