@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import "./App.css";
 
 const mockClasses = [
@@ -8,6 +8,27 @@ const mockClasses = [
 ];
 
 export default function Home({ onLogout, email }) {
+  const [studentId, setStudentId] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+
+  useEffect(() => {
+    if (!email) return;
+
+    fetch(`http://localhost:5050/api/auth/user?email=${encodeURIComponent(
+      email
+    )}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.user) {
+          setStudentId(data.user.studentId || "");
+          // normalize to YYYY-MM-DD if possible
+          setDateOfBirth(
+            data.user.dateOfBirth ? data.user.dateOfBirth.slice(0, 10) : ""
+          );
+        }
+      })
+      .catch((err) => console.error("Failed to fetch user:", err));
+  }, [email]);
   return (
     <div className="home-root">
       <header className="home-header">
@@ -37,11 +58,11 @@ export default function Home({ onLogout, email }) {
           <div className="profile-info">
             <div className="info-row">
               <div className="label">Student ID</div>
-              <div className="value">S1234567</div>
+              <div className="value">{studentId || "—"}</div>
             </div>
             <div className="info-row">
               <div className="label">Date of Birth</div>
-              <div className="value">2005-07-14</div>
+              <div className="value">{dateOfBirth || "—"}</div>
             </div>
             <div className="info-row">
               <div className="label">Email</div>

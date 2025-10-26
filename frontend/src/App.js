@@ -6,6 +6,8 @@ export default function App() {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [studentId, setStudentId] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [msg, setMsg] = useState("");
   const [authenticated, setAuthenticated] = useState(() => {
     return localStorage.getItem("scoreSyncAuth") === "true";
@@ -29,10 +31,16 @@ export default function App() {
           ? "http://localhost:5050/api/auth/login"
           : "http://localhost:5050/api/auth/register";
 
+      // Build payload depending on mode
+      const payload =
+        mode === "register"
+          ? { email, password, studentId, dateOfBirth }
+          : { email, password };
+
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -109,6 +117,26 @@ export default function App() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
+          {mode === "register" && (
+            <>
+              <input
+                className="input"
+                type="text"
+                placeholder="Student ID"
+                value={studentId}
+                onChange={(e) => setStudentId(e.target.value)}
+                required
+              />
+              <input
+                className="input"
+                type="date"
+                placeholder="Date of birth"
+                value={dateOfBirth}
+                onChange={(e) => setDateOfBirth(e.target.value)}
+                required
+              />
+            </>
+          )}
           <button className="submit" type="submit">
             {mode === "login" ? "Login" : "Create Account"}
           </button>
