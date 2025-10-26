@@ -6,6 +6,7 @@ export default function App() {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullname, setFullname] = useState("");
   const [studentId, setStudentId] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [msg, setMsg] = useState("");
@@ -34,7 +35,7 @@ export default function App() {
       // Build payload depending on mode
       const payload =
         mode === "register"
-          ? { email, password, studentId, dateOfBirth }
+          ? { email, password, fullname, studentId, dateOfBirth }
           : { email, password };
 
       const res = await fetch(endpoint, {
@@ -119,6 +120,14 @@ export default function App() {
           />
           {mode === "register" && (
             <>
+              <input
+                className="input"
+                type="text"
+                placeholder="Full Name"
+                value={fullname}
+                onChange={(e) => setFullname(e.target.value)}
+                required
+              />
               <input
                 className="input"
                 type="text"

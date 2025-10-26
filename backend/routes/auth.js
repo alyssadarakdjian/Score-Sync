@@ -8,7 +8,7 @@ const router = express.Router();
 // Register
 router.post("/register", async (req, res) => {
   try {
-    const { email, password, studentId, dateOfBirth } = req.body;
+    const { email, password, fullname, studentId, dateOfBirth } = req.body;
 
     // Basic validation
     if (!email || !password || !studentId || !dateOfBirth)
@@ -21,7 +21,7 @@ router.post("/register", async (req, res) => {
     if (isNaN(dob.getTime()))
       return res.status(400).json({ message: "Invalid dateOfBirth" });
 
-    const newUser = new User({ email, password, studentId, dateOfBirth: dob });
+    const newUser = new User({ email, password, fullname, studentId, dateOfBirth: dob });
     await newUser.save();
     res.status(201).json({ message: "User registered successfully" });
   } catch (err) {

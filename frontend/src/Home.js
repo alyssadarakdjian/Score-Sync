@@ -10,21 +10,18 @@ const mockClasses = [
 export default function Home({ onLogout, email }) {
   const [studentId, setStudentId] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
+  const [fullname, setFullname] = useState("");
 
   useEffect(() => {
     if (!email) return;
 
-    fetch(`http://localhost:5050/api/auth/user?email=${encodeURIComponent(
-      email
-    )}`)
+    fetch(`http://localhost:5050/api/auth/user?email=${encodeURIComponent(email)}`)
       .then((r) => r.json())
       .then((data) => {
         if (data?.user) {
           setStudentId(data.user.studentId || "");
-          // normalize to YYYY-MM-DD if possible
-          setDateOfBirth(
-            data.user.dateOfBirth ? data.user.dateOfBirth.slice(0, 10) : ""
-          );
+          setDateOfBirth(data.user.dateOfBirth ? data.user.dateOfBirth.slice(0, 10) : "");
+          setFullname(data.user.fullname || "");
         }
       })
       .catch((err) => console.error("Failed to fetch user:", err));
@@ -33,7 +30,9 @@ export default function Home({ onLogout, email }) {
     <div className="home-root">
       <header className="home-header">
         <div>
-          <h1>Welcome{email ? `, ${email}` : ""}!</h1>
+          <h1>
+            Welcome{fullname ? `, ${fullname}` : ""}!
+          </h1>
           <p className="subtitle">Here are your classes for the term.</p>
         </div>
         <div>
