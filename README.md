@@ -68,3 +68,18 @@ Running the Project
 
         You should see:
         A browser pop-up with the login page
+
+
+
+
+
+
+    Tailwinds CLI:
+    npm install -D tailwindcss-cli
+    npx tailwindcss-cli init -p
+
+    npm install lucide-react framer-motion
+    npm install react-router-dom
+    npm install clsx
+    npm install @tanstack/react-query
+    npm install recharts
