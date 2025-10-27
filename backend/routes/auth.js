@@ -16,7 +16,7 @@ router.post("/register", async (req, res) => {
 
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ message: "User already exists" });
-
+     
     const dob = new Date(dateOfBirth);
     if (isNaN(dob.getTime()))
       return res.status(400).json({ message: "Invalid dateOfBirth" });
