@@ -1,85 +1,182 @@
-Project Overview
+# **Score Sync**
 
-This project is built using the MERN stack:
-	•	MongoDB – for database storage
-	•	Express.js – for backend server and routing
-	•	React – for the frontend UI
-	•	Node.js – for server runtime environment
+##  Project Overview
+
+**Score Sync** is a full-stack academic management platform built with the **MERN** stack.  
+It allows teachers and administrators to manage students, grades, reports, and communications through a modern and responsive web interface.
+
+### **Tech Stack**
+- **MongoDB** – Database storage for users, students, grades, and course data  
+- **Express.js** – Backend server handling API routes  
+- **React.js** – Frontend UI framework  
+- **Node.js** – Server runtime environment  
+- **Tailwind CSS** – Utility-first CSS framework for styling  
+- **TanStack Query (React Query)** – Data fetching and caching  
+- **Lucide React** – Icon library  
+- **Recharts** – Data visualization for analytics  
+
+---
+
+## **Prerequisites**
+
+Ensure you have the following installed:
+- **Node.js** (v18 or newer)
+- **npm** (comes with Node.js)
+- **MongoDB Atlas** account or local instance
+
+---
+
+UI & Libraries Setup
+
+Install the following frontend dependencies:
+npm install -D tailwindcss-cli
+npx tailwindcss-cli init -p
+
+npm install lucide-react framer-motion
+npm install react-router-dom
+npm install clsx
+npm install @tanstack/react-query
+npm install recharts
+
+--
+
+## **Folder Structure**
 
 
-
-Prerequisites
-	•	Node.js (v18 or newer)
-	•	npm (comes with Node.js)
-
-
-
-
-Project Setup
-
-Folder structure:
 SCORE-SYNC/
 ├── backend/
 │   ├── models/
-│   │   └── User.js          # Mongoose schema for users
+│   │   ├── Teacher.js              # Schema for teachers
+│   │   └── User.js                 # Schema for user authentication
 │   ├── routes/
-│   │   └── auth.js          # Handles /api/auth/login and /api/auth/register
-│   ├── server.js            # Main backend entry point
-│   ├── .env                 # Environment variables (MongoDB URI, Port)
-│   └── package.json
+│   │   └── auth.js                 # Authentication routes (login/register)
+│   ├── .env                        # Environment variables (Mongo URI, Port)
+│   ├── package.json
+│   ├── package-lock.json
+│   └── server.js                   # Backend entry point (Express + MongoDB)
 │
 └── frontend/
-    ├── src/
-    │   ├── App.js           # React frontend logic
-    │   ├── App.css          # Styling for the login/register UI
-    ├── package.json
+├── public/                     # Public assets
+│   └── index.html
+│
+├── src/
+│   ├── api/
+│   │   └── base44Client.js     # Handles API requests to backend
+│   │
+│   ├── Components/
+│   │   ├── courses/
+│   │   │   ├── CourseDialog.js
+│   │   │   └── CourseTable.js
+│   │   │
+│   │   ├── dashboard/
+│   │   │   ├── CourseOverview.js
+│   │   │   ├── RecentGrades.js
+│   │   │   ├── StatsCard.js
+│   │   │   └── TopPerformers.js
+│   │   │
+│   │   ├── grades/
+│   │   │   ├── GradeDialog.js
+│   │   │   └── GradeTable.js
+│   │   │
+│   │   ├── students/
+│   │   │   ├── StudentDialog.js
+│   │   │   └── StudentTable.js
+│   │   │
+│   │   └── ui/
+│   │       ├── sidebar/        # Sidebar navigation component
+│   │       ├── avatar.js
+│   │       ├── badge.js
+│   │       ├── button.js
+│   │       ├── card.js
+│   │       ├── dialog.js
+│   │       ├── input.js
+│   │       ├── label.js
+│   │       ├── select.js
+│   │       ├── skeleton.js
+│   │       ├── table.js
+│   │       ├── textarea.js
+│   │       └── Layout.js
+│   │
+│   ├── Pages/
+│   │   ├── Calendar.js
+│   │   ├── Courses.js
+│   │   ├── Dashboard.js
+│   │   ├── Grades.js
+│   │   ├── Messages.js
+│   │   ├── Reports.js
+│   │   └── Students.js
+│   │
+│   ├── App.js                  # React Router setup + Layout integration
+│   ├── App.css                 # Global styles
+│   ├── Home.js                 # Landing / login redirect
+│   ├── AdminLogin.js           # Admin authentication page
+│   ├── index.js                # Entry point for React DOM render
+│   ├── index.css               # Tailwind base imports
+│   ├── reportWebVitals.js
+│   ├── setupTests.js
+│   ├── utils.js                # Utility functions
+│   ├── postcss.config.js
+│   ├── tailwind.config.js
+│   ├── package.json
+│   └── package-lock.json
+│
+├── .gitignore
+└── README.md
 
 
 
-Database Connection
-	•	The backend connects to MongoDB Atlas using mongoose.connect() inside server.js.
-	•	Connection details are stored in .env:
-
-MONGO_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/ScoreSync
-PORT=5050
 
 
+---
 
+## **Database Connection**
 
-Running the Project
-
-	•	The backend and frontend have been configured to start in unison.
-		Upon "cd" into /score-sync, the npm start command can be run to star
-		both the front and backend.
-		-If errors are returned, attempt to run "npm install" in the /score-sync
-		folder.
-		
-    • BACKEND TERMINAL
-        Make sure you are in the 'backend' directory of the project and run:
-        npm run dev
-
-        You should see:
-        ✅ MongoDB connected
-        🚀 Server running on http://127.0.0.1:5050
-
-    • FRONTEND TERMINAL
-        Make sure you are in the 'frontend' directory of the project and run:
-        npm start
-
-        You should see:
-        A browser pop-up with the login page
+The backend connects to **MongoDB Atlas** using `mongoose.connect()` inside `server.js`.  
+Connection details are stored in `.env`:
 
 
 
 
+---
+
+## **Project Setup**
+
+### **Backend Setup**
+npm install
+npm run dev
+
+Expected output:
+✅ MongoDB connected
+🚀 Server running on http://127.0.0.1:5050
 
 
-    Tailwinds CLI:
-    npm install -D tailwindcss-cli
-    npx tailwindcss-cli init -p
 
-    npm install lucide-react framer-motion
-    npm install react-router-dom
-    npm install clsx
-    npm install @tanstack/react-query
-    npm install recharts
+### **Frontend Setup**
+npm install
+npm start
+
+Expected output:
+Compiled successfully!
+Local: http://localhost:3000
+
+
+
+---
+
+Features
+
+Frontend
+Dashboard – Overview of system metrics
+Students Management – Add, edit, delete, and search students
+Grades Management – Track, calculate, and visualize grades
+Reports Page – Data analytics with charts (Recharts)
+Messages – Communication between users (UI integrated)
+Custom UI Components – Cards, Buttons, Badges, Inputs, Selects, Dialogs
+Responsive Design – Built with Tailwind and modern component structure
+
+Backend
+
+RESTful API with Express.js
+Authentication routes (Login / Register)
+CRUD routes for Students, Grades, and Courses
+MongoDB schema-based models with Mongoose
