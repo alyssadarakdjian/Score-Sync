@@ -25,7 +25,7 @@ export default function App() {
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [msg, setMsg] = useState("");
   const [authenticated, setAuthenticated] = useState(() => {
-    return localStorage.getItem("scoreSyncAuth") === "true";
+    return localStorage.getItem("scoreSyncAuth") === "false";
   });
 
   useEffect(() => {
@@ -158,7 +158,11 @@ export default function App() {
                 DashboardLayout
               ) : (
                 <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 text-gray-900">
-                  <h1 className="text-3xl font-bold mb-10">score-sync</h1>
+                  <img
+                    src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/user_68fd3d9da4c6796c04141382/5c35e26a2_ScoreSync-Picsart-BackgroundRemover.png"
+                    alt="ScoreSync Logo"
+                    className="w-48 mb-8 drop-shadow-lg"
+                  />
 
                   {isAdmin ? (
                     <AdminLogin
@@ -171,21 +175,19 @@ export default function App() {
                       <div className="flex justify-between mb-6">
                         <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
                           <button
-                            className={`px-4 py-2 rounded-lg font-medium ${
-                              mode === "login"
+                            className={`px-4 py-2 rounded-lg font-medium ${mode === "login"
                                 ? "bg-blue-600 text-white"
                                 : "text-gray-600 hover:bg-gray-200"
-                            }`}
+                              }`}
                             onClick={() => setMode("login")}
                           >
                             Login
                           </button>
                           <button
-                            className={`px-4 py-2 rounded-lg font-medium ${
-                              mode === "register"
+                            className={`px-4 py-2 rounded-lg font-medium ${mode === "register"
                                 ? "bg-blue-600 text-white"
                                 : "text-gray-600 hover:bg-gray-200"
-                            }`}
+                              }`}
                             onClick={() => setMode("register")}
                           >
                             Register
