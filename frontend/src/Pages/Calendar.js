@@ -4,7 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "../Components/ui/card";
 import { Badge } from "../Components/ui/badge";
 import { Button } from "../Components/ui/button";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../Components/ui/dialog";
+import EventForm from "../Components/EventForm";
 import {
   format,
   startOfMonth,
@@ -21,10 +23,25 @@ import {
 export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showDialog, setShowDialog] = useState(false);
 
   const { data: grades = [] } = useQuery({
     queryKey: ['grades'],
-    queryFn: () => base44.entities.Grade.list(),
+    queryFn: () => base44.entities?.Grade?.list ? base44.entities.Grade.list() : Promise.resolve([]),
+  });
+
+  const { data: events = [], refetch: refetchEvents } = useQuery({
+    queryKey: ['events'],
+    queryFn: async () => {
+      try {
+        const res = await fetch('/api/events/demo-user');
+        if (!res.ok) return [];
+        return res.json();
+      } catch (err) {
+        console.warn('Failed to fetch events:', err.message);
+        return [];
+      }
+    },
   });
 
   const monthStart = startOfMonth(currentDate);
@@ -35,7 +52,7 @@ export default function Calendar() {
   const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
   const getEventsForDate = (date) => {
-    return grades.filter(grade => {
+    const gradeEvents = grades.filter(grade => {
       const dueDate = grade.due_date ? new Date(grade.due_date) : null;
       const submittedDate = grade.submitted_date ? new Date(grade.submitted_date) : null;
       const gradedDate = grade.graded_date ? new Date(grade.graded_date) : null;
@@ -44,6 +61,13 @@ export default function Calendar() {
              (submittedDate && isSameDay(submittedDate, date)) ||
              (gradedDate && isSameDay(gradedDate, date));
     });
+
+    const calendarEvents = events.filter(event => 
+      isSameDay(new Date(event.start), date) || 
+      isSameDay(new Date(event.end), date)
+    );
+
+    return [...gradeEvents, ...calendarEvents];
   };
 
   const selectedDateEvents = getEventsForDate(selectedDate);
@@ -69,13 +93,47 @@ export default function Calendar() {
           <h2 className="text-2xl font-bold text-[#1A4D5E]">Academic Calendar</h2>
           <p className="text-[#78909C] mt-1">Track assignments, exams, and important dates</p>
         </div>
-        <Button
-          onClick={today}
-          className="bg-[#00796B] hover:bg-[#00695C]"
-        >
-          <CalendarIcon className="w-4 h-4 mr-2" />
-          Today
-        </Button>
+  <div className="flex items-center gap-2 relative z-10 mr-4">
+          <Button
+            onClick={() => setShowDialog(true)}
+            variant="default"
+            size="md"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Event
+          </Button>
+          <Button
+            onClick={today}
+            variant="default"
+            size="md"
+          >
+            <CalendarIcon className="w-4 h-4 mr-2" />
+            Today
+          </Button>
+          <Dialog open={showDialog} onOpenChange={setShowDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Event</DialogTitle>
+              </DialogHeader>
+              <EventForm
+                onSubmit={async (eventData) => {
+                  try {
+                    await fetch('/api/events', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ ...eventData, userId: 'demo-user' }),
+                    });
+                    refetchEvents();
+                    setShowDialog(false);
+                  } catch (err) {
+                    console.error('Failed creating event:', err);
+                  }
+                }}
+                onClose={() => setShowDialog(false)}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -169,35 +227,61 @@ export default function Calendar() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {selectedDateEvents.map((event) => (
-                    <div
-                      key={event.id}
-                      className="p-3 rounded-lg border border-gray-100 hover:border-[#00796B] hover:bg-[#E0F2F1] transition-all duration-200"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <h4 className="font-semibold text-[#37474F]">{event.assignment_name}</h4>
-                        <Badge variant="outline" className="text-xs">
-                          {event.assignment_type}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-[#546E7A] mb-1">
-                        {event.course_name}
-                      </p>
-                      <p className="text-sm text-[#78909C]">
-                        {event.student_name}
-                      </p>
-                      {event.due_date && isSameDay(new Date(event.due_date), selectedDate) && (
-                        <Badge className="mt-2 bg-orange-100 text-orange-800 text-xs">
-                          Due Date
-                        </Badge>
-                      )}
-                      {event.graded_date && isSameDay(new Date(event.graded_date), selectedDate) && (
-                        <Badge className="mt-2 bg-green-100 text-green-800 text-xs">
-                          Graded: {event.percentage?.toFixed(0)}%
-                        </Badge>
-                      )}
-                    </div>
-                  ))}
+                  {selectedDateEvents.map((event) => {
+                    if (event.assignment_name) {
+                      // Grade event
+                      return (
+                        <div
+                          key={event.id}
+                          className="p-3 rounded-lg border border-gray-100 hover:border-[#00796B] hover:bg-[#E0F2F1] transition-all duration-200"
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <h4 className="font-semibold text-[#37474F]">{event.assignment_name}</h4>
+                            <Badge variant="outline" className="text-xs">
+                              {event.assignment_type}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-[#546E7A] mb-1">
+                            {event.course_name}
+                          </p>
+                          <p className="text-sm text-[#78909C]">
+                            {event.student_name}
+                          </p>
+                          {event.due_date && isSameDay(new Date(event.due_date), selectedDate) && (
+                            <Badge className="mt-2 bg-orange-100 text-orange-800 text-xs">
+                              Due Date
+                            </Badge>
+                          )}
+                          {event.graded_date && isSameDay(new Date(event.graded_date), selectedDate) && (
+                            <Badge className="mt-2 bg-green-100 text-green-800 text-xs">
+                              Graded: {event.percentage?.toFixed(0)}%
+                            </Badge>
+                          )}
+                        </div>
+                      );
+                    } else {
+                      // Calendar event
+                      return (
+                        <div
+                          key={event.id}
+                          className="p-3 rounded-lg border border-gray-100 hover:border-[#00796B] hover:bg-[#E0F2F1] transition-all duration-200"
+                          style={{ borderLeftColor: event.color, borderLeftWidth: '4px' }}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <h4 className="font-semibold text-[#37474F]">{event.title}</h4>
+                          </div>
+                          {event.description && (
+                            <p className="text-sm text-[#546E7A] mb-1">
+                              {event.description}
+                            </p>
+                          )}
+                          <p className="text-sm text-[#78909C]">
+                            {format(new Date(event.start), 'h:mm a')} - {format(new Date(event.end), 'h:mm a')}
+                          </p>
+                        </div>
+                      );
+                    }
+                  })}
                 </div>
               )}
             </CardContent>

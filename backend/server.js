@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import authRoutes from "./routes/auth.js"; //imports the authentication from the user
+import eventRoutes from "./routes/events.js";
 
 dotenv.config();
 
@@ -27,7 +28,8 @@ const MONGO_URI = process.env.MONGO_URI;
       console.warn("⚠️ No MONGO_URI found; starting API without DB connection.");
     }
 
-    app.use("/api/auth", authRoutes);
+  app.use("/api/auth", authRoutes);
+  app.use("/api/events", eventRoutes);
 
     // Bind to IPv4 to avoid localhost/IPv6 quirks
     app.listen(PORT, "0.0.0.0", () => {
