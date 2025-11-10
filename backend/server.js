@@ -4,6 +4,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import authRoutes from "./routes/auth.js"; //imports the authentication from the user
 import eventRoutes from "./routes/events.js";
+import assignmentRoutes from "./routes/assignments.js";
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ const MONGO_URI = process.env.MONGO_URI;
 
   app.use("/api/auth", authRoutes);
   app.use("/api/events", eventRoutes);
+  app.use("/api/assignments", assignmentRoutes);
 
     // Bind to IPv4 to avoid localhost/IPv6 quirks
     app.listen(PORT, "0.0.0.0", () => {

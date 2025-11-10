@@ -4,9 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "../Components/ui/card";
 import { Badge } from "../Components/ui/badge";
 import { Button } from "../Components/ui/button";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, Check, RotateCcw } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../Components/ui/dialog";
 import EventForm from "../Components/EventForm";
+import AssignmentForm from "../Components/AssignmentForm";
 import {
   format,
   startOfMonth,
@@ -24,6 +25,7 @@ export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDialog, setShowDialog] = useState(false);
+  const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
 
   const { data: grades = [] } = useQuery({
     queryKey: ['grades'],
@@ -39,6 +41,20 @@ export default function Calendar() {
         return res.json();
       } catch (err) {
         console.warn('Failed to fetch events:', err.message);
+        return [];
+      }
+    },
+  });
+
+  const { data: assignments = [], refetch: refetchAssignments } = useQuery({
+    queryKey: ['assignments'],
+    queryFn: async () => {
+      try {
+        const res = await fetch('/api/assignments/demo-user');
+        if (!res.ok) return [];
+        return res.json();
+      } catch (err) {
+        console.warn('Failed to fetch assignments:', err.message);
         return [];
       }
     },
@@ -67,7 +83,11 @@ export default function Calendar() {
       isSameDay(new Date(event.end), date)
     );
 
-    return [...gradeEvents, ...calendarEvents];
+    const assignmentEvents = assignments.filter(assignment =>
+      isSameDay(new Date(assignment.dueDate), date)
+    );
+
+    return [...gradeEvents, ...calendarEvents, ...assignmentEvents];
   };
 
   const selectedDateEvents = getEventsForDate(selectedDate);
@@ -86,6 +106,24 @@ export default function Calendar() {
     setSelectedDate(now);
   };
 
+  const markAssignmentDone = async (id) => {
+    try {
+      await fetch(`/api/assignments/${id}/complete`, { method: 'PATCH' });
+      await refetchAssignments();
+    } catch (err) {
+      console.error('Failed to complete assignment:', err);
+    }
+  };
+
+  const undoAssignmentDone = async (id) => {
+    try {
+      await fetch(`/api/assignments/${id}/uncomplete`, { method: 'PATCH' });
+      await refetchAssignments();
+    } catch (err) {
+      console.error('Failed to undo assignment:', err);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -93,7 +131,7 @@ export default function Calendar() {
           <h2 className="text-2xl font-bold text-[#1A4D5E]">Academic Calendar</h2>
           <p className="text-[#78909C] mt-1">Track assignments, exams, and important dates</p>
         </div>
-  <div className="flex items-center gap-2 relative z-10 mr-4">
+        <div className="flex items-center gap-2 relative z-10 mr-4">
           <Button
             onClick={() => setShowDialog(true)}
             variant="default"
@@ -101,6 +139,14 @@ export default function Calendar() {
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Event
+          </Button>
+          <Button
+            onClick={() => setShowAssignmentDialog(true)}
+            variant="default"
+            size="md"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Assignment
           </Button>
           <Button
             onClick={today}
@@ -130,6 +176,29 @@ export default function Calendar() {
                   }
                 }}
                 onClose={() => setShowDialog(false)}
+              />
+            </DialogContent>
+          </Dialog>
+          <Dialog open={showAssignmentDialog} onOpenChange={setShowAssignmentDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Assignment</DialogTitle>
+              </DialogHeader>
+              <AssignmentForm
+                onSubmit={async (assignmentData) => {
+                  try {
+                    await fetch('/api/assignments', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ ...assignmentData, userId: 'demo-user' }),
+                    });
+                    refetchAssignments();
+                    setShowAssignmentDialog(false);
+                  } catch (err) {
+                    console.error('Failed creating assignment:', err);
+                  }
+                }}
+                onClose={() => setShowAssignmentDialog(false)}
               />
             </DialogContent>
           </Dialog>
@@ -256,6 +325,57 @@ export default function Calendar() {
                             <Badge className="mt-2 bg-green-100 text-green-800 text-xs">
                               Graded: {event.percentage?.toFixed(0)}%
                             </Badge>
+                          )}
+                        </div>
+                      );
+                    } else if (event.name) {
+                      // Assignment event
+                      return (
+                        <div
+                          key={event._id}
+                          className="p-3 rounded-lg border border-gray-100 hover:border-[#00796B] hover:bg-[#E0F2F1] transition-all duration-200"
+                          style={{ borderLeftColor: event.completed ? '#4CAF50' : '#FF9800', borderLeftWidth: '4px' }}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <h4 className="font-semibold text-[#37474F] flex items-center gap-2">
+                              {event.name}
+                              {event.completed && (
+                                <Badge className="bg-green-100 text-green-800 text-xs">Done</Badge>
+                              )}
+                            </h4>
+                            <Badge className="bg-orange-100 text-orange-800 text-xs">
+                              Assignment
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-[#78909C] mb-3">
+                            Due: {format(new Date(event.dueDate), 'MMM d, h:mm a')}
+                          </p>
+                          {!event.completed && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => markAssignmentDone(event._id)}
+                              className="flex items-center gap-1"
+                            >
+                              <Check className="w-4 h-4" />
+                              Mark as Done
+                            </Button>
+                          )}
+                          {event.completed && (
+                            <div className="flex items-center gap-3 mt-2">
+                              {event.completedAt && (
+                                <p className="text-xs text-green-700">Completed {format(new Date(event.completedAt), 'MMM d, h:mm a')}</p>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => undoAssignmentDone(event._id)}
+                                className="flex items-center gap-1"
+                              >
+                                <RotateCcw className="w-4 h-4" />
+                                Undo
+                              </Button>
+                            </div>
                           )}
                         </div>
                       );
