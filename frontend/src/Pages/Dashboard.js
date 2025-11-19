@@ -14,30 +14,50 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Get logged-in user info
+        const user = JSON.parse(localStorage.getItem("user"));
+        if (!user || !user._id) {
+          console.warn("No user logged in");
+          return;
+        }
+
+        // Define base API URL (use 127.0.0.1 to avoid macOS localhost issues)
+        const API_BASE = "http://127.0.0.1:5050/api";
+
+        // Fetch all data in parallel
         const [studentsRes, coursesRes, gradesRes] = await Promise.all([
-          axios.get("/api/students"),
-          axios.get("/api/courses"),
-          axios.get("/api/grades"),
+          axios.get(`${API_BASE}/students`),
+          axios.get(`${API_BASE}/courses/user/${user._id}`),
+          axios.get(`${API_BASE}/grades`),
         ]);
 
         setStudents(studentsRes.data || []);
         setCourses(coursesRes.data || []);
         setGrades(gradesRes.data || []);
       } catch (error) {
-        console.error("Error fetching dashboard data:", error);
+        console.error("❌ Error fetching dashboard data:", error);
       }
     };
 
     fetchData();
   }, []);
 
-  const activeCourses = courses.filter((c) => c.status === "active").length;
+  // Active courses
+  const activeCourses = courses.filter(
+    (c) =>
+      c.status?.toLowerCase() === "active" ||
+      c.Status?.toLowerCase() === "active"
+  ).length;
+
+  // Average grade
   const averageGrade =
     grades.length > 0
       ? (
           grades.reduce((sum, g) => sum + (g.percentage || 0), 0) / grades.length
         ).toFixed(1)
       : 0;
+
+  // Upcoming assignments
   const upcomingAssignments = grades.filter((g) => {
     if (!g.due_date) return false;
     return new Date(g.due_date) > new Date();

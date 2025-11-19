@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { base44 } from "../api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../Components/ui/button";
 import { Input } from "../Components/ui/input";
@@ -15,11 +14,23 @@ export default function Courses() {
 
   const { data: courses = [], isLoading } = useQuery({
     queryKey: ['courses'],
-    queryFn: () => base44.entities.Course.list('-created_date'),
+    queryFn: async () => {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/courses`);
+      if (!res.ok) throw new Error('Failed to fetch courses');
+      return res.json();
+    },
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Course.create(data),
+    mutationFn: async (data) => {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/courses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create course");
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['courses'] });
       setDialogOpen(false);
@@ -28,7 +39,15 @@ export default function Courses() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Course.update(id, data),
+    mutationFn: async ({ course_code, data }) => {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/courses/${course_code}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update course");
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['courses'] });
       setDialogOpen(false);
@@ -37,7 +56,13 @@ export default function Courses() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Course.delete(id),
+    mutationFn: async (course_code) => {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/courses/${course_code}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete course");
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['courses'] });
     },
@@ -51,7 +76,7 @@ export default function Courses() {
 
   const handleSave = (data) => {
     if (selectedCourse) {
-      updateMutation.mutate({ id: selectedCourse.id, data });
+      updateMutation.mutate({ course_code: selectedCourse.course_code, data });
     } else {
       createMutation.mutate(data);
     }
@@ -62,9 +87,9 @@ export default function Courses() {
     setDialogOpen(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = (course_code) => {
     if (window.confirm('Are you sure you want to delete this course?')) {
-      deleteMutation.mutate(id);
+      deleteMutation.mutate(course_code);
     }
   };
 

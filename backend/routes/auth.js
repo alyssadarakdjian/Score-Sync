@@ -43,10 +43,11 @@ router.post("/login", async (req, res) => {
     if (!user || user.password !== password)
       return res.status(400).json({ message: "Invalid credentials" });
 
-    // ✅ Return user data (excluding password)
+    // Return user data (including _id)
     res.json({
       message: "Login successful",
       user: {
+        _id: user._id,
         email: user.email,
         fullname: user.fullname,
         studentId: user.studentId,

@@ -15,7 +15,7 @@ import "./index.css";
 const queryClient = new QueryClient();
 
 function AppContent() {
-  const navigate = useNavigate(); // initialize navigate
+  const navigate = useNavigate();
 
   const [mode, setMode] = useState("login");
   const [isAdmin, setIsAdmin] = useState(false);
@@ -64,17 +64,22 @@ function AppContent() {
 
       setMsg(data?.message);
 
-      // Login logic
+      // STUDENT LOGIN LOGIC
       if (mode === "login") {
         setAuthenticated(true);
         setIsAdmin(false);
         localStorage.setItem("scoreSyncAuth", "true");
         localStorage.setItem("scoreSyncEmail", data.user.email);
-
         if (data.user.fullname) {
           localStorage.setItem("scoreSyncName", data.user.fullname);
-        } else {
-          console.warn("⚠️ No fullname returned from backend:", data.user);
+        }
+
+        // Store the full user object for dashboard access
+        localStorage.setItem("user", JSON.stringify(data.user));
+
+        // Optional: if token is returned
+        if (data.token) {
+          localStorage.setItem("token", data.token);
         }
 
         setFullname(data.user.fullname || "");
@@ -114,11 +119,13 @@ function AppContent() {
     localStorage.removeItem("scoreSyncAuth");
     localStorage.removeItem("scoreSyncEmail");
     localStorage.removeItem("scoreSyncName");
+    localStorage.removeItem("user"); //clear user data
+    localStorage.removeItem("token");
     setEmail("");
     setPassword("");
     setMode("login");
     setMsg("");
-    navigate("/"); // redirect to login page
+    navigate("/");
   };
 
   const storedName = localStorage.getItem("scoreSyncName");
@@ -149,7 +156,6 @@ function AppContent() {
 
   return (
     <Routes>
-      {/* Root route */}
       <Route
         path="/"
         element={
@@ -266,13 +272,11 @@ function AppContent() {
         }
       />
 
-      {/* Dashboard route */}
       <Route
         path="/Dashboard"
         element={authenticated ? DashboardLayout : <div>Unauthorized</div>}
       />
 
-      {/* Other routes */}
       {[
         { path: "/Courses", page: <Courses />, name: "Courses" },
         { path: "/Grades", page: <Grades />, name: "Grades" },

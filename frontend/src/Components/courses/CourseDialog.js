@@ -22,7 +22,6 @@ export default function CourseDialog({ open, onOpenChange, course, onSave, isLoa
     description: "",
     teacher_name: "",
     teacher_email: "",
-    grade_level: "All",
     subject: "Mathematics",
     credits: 1,
     semester: "Fall",
@@ -43,7 +42,6 @@ export default function CourseDialog({ open, onOpenChange, course, onSave, isLoa
         description: "",
         teacher_name: "",
         teacher_email: "",
-        grade_level: "All",
         subject: "Mathematics",
         credits: 1,
         semester: "Fall",
@@ -153,25 +151,7 @@ export default function CourseDialog({ open, onOpenChange, course, onSave, isLoa
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="grade_level">Grade Level</Label>
-                <Select
-                  value={formData.grade_level}
-                  onValueChange={(value) => setFormData({ ...formData, grade_level: value })}
-                >
-                  <SelectTrigger className="border-2 focus:border-[#00796B]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="All">All Grades</SelectItem>
-                    <SelectItem value="9th">9th Grade</SelectItem>
-                    <SelectItem value="10th">10th Grade</SelectItem>
-                    <SelectItem value="11th">11th Grade</SelectItem>
-                    <SelectItem value="12th">12th Grade</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="credits">Credits</Label>
                 <Input

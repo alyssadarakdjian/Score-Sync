@@ -5,6 +5,8 @@ import dotenv from "dotenv";
 import authRoutes from "./routes/auth.js"; //imports the authentication from the user
 import eventRoutes from "./routes/events.js";
 import assignmentRoutes from "./routes/assignments.js";
+import courseRoutes from "./routes/course.js";
+import gradeRoutes from "./routes/grade.js";
 
 dotenv.config();
 
@@ -22,16 +24,18 @@ const MONGO_URI = process.env.MONGO_URI;
 
 (async () => {
   try {
-    if (MONGO_URI) {
+    if (!MONGO_URI) {
+      console.warn("⚠️ No MONGO_URI found; starting API without DB connection.");
+    } else {
       await mongoose.connect(MONGO_URI);
       console.log("✅ MongoDB connected");
-    } else {
-      console.warn("⚠️ No MONGO_URI found; starting API without DB connection.");
     }
 
-  app.use("/api/auth", authRoutes);
-  app.use("/api/events", eventRoutes);
-  app.use("/api/assignments", assignmentRoutes);
+    app.use("/api/auth", authRoutes);
+    app.use("/api/events", eventRoutes);
+    app.use("/api/assignments", assignmentRoutes);
+    app.use("/api/courses", courseRoutes);
+    app.use("/api/grades", gradeRoutes);
 
     // Bind to IPv4 to avoid localhost/IPv6 quirks
     app.listen(PORT, "0.0.0.0", () => {
