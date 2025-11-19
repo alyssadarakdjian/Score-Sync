@@ -1,12 +1,17 @@
-import React, { useState } from "react";
-import { base44 } from "../api/base44Client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Plus, Search } from "lucide-react";
+import { useState } from "react";
+import GradeDialog from "../Components/grades/GradeDialog";
+import GradeTable from "../Components/grades/GradeTable";
 import { Button } from "../Components/ui/button";
 import { Input } from "../Components/ui/input";
-import { Plus, Search } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../Components/ui/select";
-import GradeTable from "../Components/grades/GradeTable";
-import GradeDialog from "../Components/grades/GradeDialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../Components/ui/select";
 
 export default function Grades() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -16,95 +21,125 @@ export default function Grades() {
   const [selectedGrade, setSelectedGrade] = useState(null);
   const queryClient = useQueryClient();
 
-  const { data: grades = [], isLoading: gradesLoading } = useQuery({
-    queryKey: ['grades'],
-    queryFn: () => base44.entities.Grade.list('-created_date'),
+  // TODO: once you have real student/course endpoints, replace these with real queries
+  const students = []; // placeholder so GradeDialog still receives prop
+  const courses = [];  // placeholder for course filter and dialog
+
+  // 1) Load grades from your backend
+  const {
+    data: grades = [],
+    isLoading: gradesLoading,
+    error: gradesError,
+  } = useQuery({
+    queryKey: ["grades"],
+    queryFn: async () => {
+      // if you want per-student, you can pull an ID from localStorage
+      // const studentId = localStorage.getItem("scoreSyncEmail");
+      const res = await fetch("http://localhost:5050/api/grades");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to fetch grades");
+      }
+      const json = await res.json();
+      return json.grades || [];
+    },
   });
 
-  const { data: students = [] } = useQuery({
-    queryKey: ['students'],
-    queryFn: () => base44.entities.Student.list(),
-  });
+  // Helper to compute percentage + letter once, used in create & update
+  const computeGradePayload = (data) => {
+    const percentage = (data.score / data.max_score) * 100;
+    let letterGrade = "F";
+    if (percentage >= 97) letterGrade = "A+";
+    else if (percentage >= 93) letterGrade = "A";
+    else if (percentage >= 90) letterGrade = "A-";
+    else if (percentage >= 87) letterGrade = "B+";
+    else if (percentage >= 83) letterGrade = "B";
+    else if (percentage >= 80) letterGrade = "B-";
+    else if (percentage >= 77) letterGrade = "C+";
+    else if (percentage >= 73) letterGrade = "C";
+    else if (percentage >= 70) letterGrade = "C-";
+    else if (percentage >= 67) letterGrade = "D+";
+    else if (percentage >= 63) letterGrade = "D";
+    else if (percentage >= 60) letterGrade = "D-";
 
-  const { data: courses = [] } = useQuery({
-    queryKey: ['courses'],
-    queryFn: () => base44.entities.Course.list(),
-  });
+    return {
+      ...data,
+      percentage,
+      letter_grade: letterGrade,
+      graded_date: new Date().toISOString().split("T")[0],
+    };
+  };
 
+  // 2) Create grade
   const createMutation = useMutation({
-    mutationFn: (data) => {
-      const percentage = (data.score / data.max_score) * 100;
-      let letterGrade = 'F';
-      if (percentage >= 97) letterGrade = 'A+';
-      else if (percentage >= 93) letterGrade = 'A';
-      else if (percentage >= 90) letterGrade = 'A-';
-      else if (percentage >= 87) letterGrade = 'B+';
-      else if (percentage >= 83) letterGrade = 'B';
-      else if (percentage >= 80) letterGrade = 'B-';
-      else if (percentage >= 77) letterGrade = 'C+';
-      else if (percentage >= 73) letterGrade = 'C';
-      else if (percentage >= 70) letterGrade = 'C-';
-      else if (percentage >= 67) letterGrade = 'D+';
-      else if (percentage >= 63) letterGrade = 'D';
-      else if (percentage >= 60) letterGrade = 'D-';
-      
-      return base44.entities.Grade.create({
-        ...data,
-        percentage,
-        letter_grade: letterGrade,
-        graded_date: new Date().toISOString().split('T')[0]
+    mutationFn: async (data) => {
+      const payload = computeGradePayload(data);
+      const res = await fetch("http://localhost:5050/api/grades", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to create grade");
+      }
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['grades'] });
+      queryClient.invalidateQueries({ queryKey: ["grades"] });
       setDialogOpen(false);
       setSelectedGrade(null);
     },
   });
 
+  // 3) Update grade
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => {
-      const percentage = (data.score / data.max_score) * 100;
-      let letterGrade = 'F';
-      if (percentage >= 97) letterGrade = 'A+';
-      else if (percentage >= 93) letterGrade = 'A';
-      else if (percentage >= 90) letterGrade = 'A-';
-      else if (percentage >= 87) letterGrade = 'B+';
-      else if (percentage >= 83) letterGrade = 'B';
-      else if (percentage >= 80) letterGrade = 'B-';
-      else if (percentage >= 77) letterGrade = 'C+';
-      else if (percentage >= 73) letterGrade = 'C';
-      else if (percentage >= 70) letterGrade = 'C-';
-      else if (percentage >= 67) letterGrade = 'D+';
-      else if (percentage >= 63) letterGrade = 'D';
-      else if (percentage >= 60) letterGrade = 'D-';
-      
-      return base44.entities.Grade.update(id, {
-        ...data,
-        percentage,
-        letter_grade: letterGrade
+    mutationFn: async ({ id, data }) => {
+      const payload = computeGradePayload(data);
+      const res = await fetch(`http://localhost:5050/api/grades/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to update grade");
+      }
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['grades'] });
+      queryClient.invalidateQueries({ queryKey: ["grades"] });
       setDialogOpen(false);
       setSelectedGrade(null);
     },
   });
 
+  // 4) Delete grade
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Grade.delete(id),
+    mutationFn: async (id) => {
+      const res = await fetch(`http://localhost:5050/api/grades/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to delete grade");
+      }
+      return res.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['grades'] });
+      queryClient.invalidateQueries({ queryKey: ["grades"] });
     },
   });
 
-  const filteredGrades = grades.filter(grade => {
+  // Filtering client-side
+  const filteredGrades = grades.filter((grade) => {
     const matchesSearch = `${grade.student_name} ${grade.course_name} ${grade.assignment_name}`
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
-    const matchesCourse = filterCourse === 'all' || grade.course_id === filterCourse;
-    const matchesType = filterType === 'all' || grade.assignment_type === filterType;
+    const matchesCourse =
+      filterCourse === "all" || grade.course_id === filterCourse;
+    const matchesType =
+      filterType === "all" || grade.assignment_type === filterType;
     return matchesSearch && matchesCourse && matchesType;
   });
 
@@ -122,7 +157,7 @@ export default function Grades() {
   };
 
   const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this grade?')) {
+    if (window.confirm("Are you sure you want to delete this grade?")) {
       deleteMutation.mutate(id);
     }
   };
@@ -133,6 +168,11 @@ export default function Grades() {
         <div>
           <h2 className="text-2xl font-bold text-[#1A4D5E]">Grade Management</h2>
           <p className="text-[#78909C] mt-1">Record and manage student grades</p>
+          {gradesError && (
+            <p className="text-sm text-red-600 mt-1">
+              {gradesError.message}
+            </p>
+          )}
         </div>
         <Button
           onClick={() => {
@@ -163,7 +203,7 @@ export default function Grades() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Courses</SelectItem>
-            {courses.map(course => (
+            {courses.map((course) => (
               <SelectItem key={course.id} value={course.id}>
                 {course.course_name}
               </SelectItem>
