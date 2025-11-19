@@ -1,15 +1,20 @@
-import express from "express";
-import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
+import express from "express";
+import mongoose from "mongoose";
+import assignmentRoutes from "./routes/assignments.js";
 import authRoutes from "./routes/auth.js"; //imports the authentication from the user
 import eventRoutes from "./routes/events.js";
-import assignmentRoutes from "./routes/assignments.js";
 
 dotenv.config();
 
 const app = express();
-app.use(cors({ origin: "http://localhost:3000" }));
+app.use(
+  cors({
+    origin: ["http://localhost:3000", "http://localhost:3001"],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 // Health check
