@@ -22,16 +22,40 @@ import {
 } from "date-fns";
 
 export default function Calendar() {
+  // Date currently displayed in the month grid (e.g., November 2025)
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  // Date currently selected by the user (used in the right-side "Day details" card)
   const [selectedDate, setSelectedDate] = useState(new Date());
+
+  // Controls visibility of "Add Event" dialog
   const [showDialog, setShowDialog] = useState(false);
+
+  // Controls visibility of "Add Assignment" dialog
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
 
+  /*
+  ----------------------------------------------------------
+  FETCH GRADE-BASED EVENTS (FROM Base44)
+  ----------------------------------------------------------
+  We treat grade due dates, submission dates, and graded dates
+  as "events" that can appear on the calendar.
+  */
   const { data: grades = [] } = useQuery({
     queryKey: ['grades'],
-    queryFn: () => base44.entities?.Grade?.list ? base44.entities.Grade.list() : Promise.resolve([]),
+    // Fallback to empty list if Grade entity doesn't exist
+    queryFn: () =>
+      base44.entities?.Grade?.list
+        ? base44.entities.Grade.list()
+        : Promise.resolve([]),
   });
 
+  /*
+  ----------------------------------------------------------
+  FETCH CALENDAR EVENTS (From your /api/events endpoint)
+  ----------------------------------------------------------
+  These are generic events (meetings, exams, etc.) tied to "demo-user".
+  */
   const { data: events = [], refetch: refetchEvents } = useQuery({
     queryKey: ['events'],
     queryFn: async () => {
@@ -39,13 +63,19 @@ export default function Calendar() {
         const res = await fetch('/api/events/demo-user');
         if (!res.ok) return [];
         return res.json();
-      } catch (err) {
+      } catch (err: any) {
         console.warn('Failed to fetch events:', err.message);
         return [];
       }
     },
   });
 
+  /*
+  ----------------------------------------------------------
+  FETCH ASSIGNMENTS (From your /api/assignments endpoint)
+  ----------------------------------------------------------
+  These assignments have due dates and can be marked done/undone.
+  */
   const { data: assignments = [], refetch: refetchAssignments } = useQuery({
     queryKey: ['assignments'],
     queryFn: async () => {
@@ -53,13 +83,21 @@ export default function Calendar() {
         const res = await fetch('/api/assignments/demo-user');
         if (!res.ok) return [];
         return res.json();
-      } catch (err) {
+      } catch (err: any) {
         console.warn('Failed to fetch assignments:', err.message);
         return [];
       }
     },
   });
 
+  /*
+  ----------------------------------------------------------
+  CALENDAR RANGE CALCULATIONS
+  ----------------------------------------------------------
+  - monthStart / monthEnd: first + last day of current month
+  - calendarStart / calendarEnd: extend to full weeks (Sun-Sat)
+  - calendarDays: list of all days shown in the grid
+  */
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const calendarStart = startOfWeek(monthStart);
@@ -67,31 +105,54 @@ export default function Calendar() {
   
   const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
-  const getEventsForDate = (date) => {
-    const gradeEvents = grades.filter(grade => {
+  /*
+  ----------------------------------------------------------
+  getEventsForDate(date)
+  ----------------------------------------------------------
+  Collects:
+  - grade events whose due/submitted/graded dates match "date"
+  - regular calendar events whose start/end fall on "date"
+  - assignment events whose dueDate matches "date"
+  Returned as a single combined list of "events" for that day.
+  */
+  const getEventsForDate = (date: Date) => {
+    // Grades from Base44 as events (due, submitted, graded)
+    const gradeEvents = grades.filter((grade: any) => {
       const dueDate = grade.due_date ? new Date(grade.due_date) : null;
       const submittedDate = grade.submitted_date ? new Date(grade.submitted_date) : null;
       const gradedDate = grade.graded_date ? new Date(grade.graded_date) : null;
       
-      return (dueDate && isSameDay(dueDate, date)) ||
-             (submittedDate && isSameDay(submittedDate, date)) ||
-             (gradedDate && isSameDay(gradedDate, date));
+      return (
+        (dueDate && isSameDay(dueDate, date)) ||
+        (submittedDate && isSameDay(submittedDate, date)) ||
+        (gradedDate && isSameDay(gradedDate, date))
+      );
     });
 
-    const calendarEvents = events.filter(event => 
+    // Regular calendar events (start/end)
+    const calendarEvents = events.filter((event: any) =>
       isSameDay(new Date(event.start), date) || 
       isSameDay(new Date(event.end), date)
     );
 
-    const assignmentEvents = assignments.filter(assignment =>
+    // Assignments by dueDate
+    const assignmentEvents = assignments.filter((assignment: any) =>
       isSameDay(new Date(assignment.dueDate), date)
     );
 
+    // Merge all three into one array
     return [...gradeEvents, ...calendarEvents, ...assignmentEvents];
   };
 
+  // Events that correspond to the currently selected date (shown on the right)
   const selectedDateEvents = getEventsForDate(selectedDate);
 
+  /*
+  ----------------------------------------------------------
+  NAVIGATION FUNCTIONS
+  ----------------------------------------------------------
+  Move between months or jump to "today".
+  */
   const previousMonth = () => {
     setCurrentDate(subMonths(currentDate, 1));
   };
@@ -106,7 +167,14 @@ export default function Calendar() {
     setSelectedDate(now);
   };
 
-  const markAssignmentDone = async (id) => {
+  /*
+  ----------------------------------------------------------
+  ASSIGNMENT ACTIONS
+  ----------------------------------------------------------
+  Mark assignment as completed or undo completion via PATCH requests.
+  Then refetch assignments to update UI.
+  */
+  const markAssignmentDone = async (id: string) => {
     try {
       await fetch(`/api/assignments/${id}/complete`, { method: 'PATCH' });
       await refetchAssignments();
@@ -115,7 +183,7 @@ export default function Calendar() {
     }
   };
 
-  const undoAssignmentDone = async (id) => {
+  const undoAssignmentDone = async (id: string) => {
     try {
       await fetch(`/api/assignments/${id}/uncomplete`, { method: 'PATCH' });
       await refetchAssignments();
@@ -126,12 +194,21 @@ export default function Calendar() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
+      {/* 
+      ======================================================
+      HEADER + ACTION BUTTONS (Add Event / Add Assignment / Today)
+      ======================================================
+      */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-[#1A4D5E]">Academic Calendar</h2>
-          <p className="text-[#78909C] mt-1">Track assignments, exams, and important dates</p>
+          <p className="text-[#78909C] mt-1">
+            Track assignments, exams, and important dates
+          </p>
         </div>
+
         <div className="flex items-center gap-2 relative z-10 mr-4">
+          {/* Open Event dialog */}
           <Button
             onClick={() => setShowDialog(true)}
             variant="default"
@@ -140,6 +217,8 @@ export default function Calendar() {
             <Plus className="w-4 h-4 mr-2" />
             Add Event
           </Button>
+
+          {/* Open Assignment dialog */}
           <Button
             onClick={() => setShowAssignmentDialog(true)}
             variant="default"
@@ -148,6 +227,8 @@ export default function Calendar() {
             <Plus className="w-4 h-4 mr-2" />
             Add Assignment
           </Button>
+
+          {/* Jump to today's date */}
           <Button
             onClick={today}
             variant="default"
@@ -156,6 +237,14 @@ export default function Calendar() {
             <CalendarIcon className="w-4 h-4 mr-2" />
             Today
           </Button>
+
+          {/* 
+          --------------------------------------------------
+          EVENT DIALOG
+          --------------------------------------------------
+          Wrapper that contains the EventForm. On submit, POST
+          to /api/events and refetch event list.
+          */}
           <Dialog open={showDialog} onOpenChange={setShowDialog}>
             <DialogContent>
               <DialogHeader>
@@ -179,6 +268,14 @@ export default function Calendar() {
               />
             </DialogContent>
           </Dialog>
+
+          {/* 
+          --------------------------------------------------
+          ASSIGNMENT DIALOG
+          --------------------------------------------------
+          Wrapper that contains the AssignmentForm. On submit,
+          POST to /api/assignments and refetch assignment list.
+          */}
           <Dialog open={showAssignmentDialog} onOpenChange={setShowAssignmentDialog}>
             <DialogContent>
               <DialogHeader>
@@ -205,15 +302,27 @@ export default function Calendar() {
         </div>
       </div>
 
+      {/* 
+      ======================================================
+      MAIN LAYOUT: LEFT = MONTH CALENDAR, RIGHT = DAY DETAILS
+      ======================================================
+      */}
       <div className="grid lg:grid-cols-3 gap-6">
+        {/* 
+        =======================================
+        LEFT: MONTH VIEW
+        =======================================
+        */}
         <div className="lg:col-span-2">
           <Card className="shadow-lg border-0 bg-white">
+            {/* Month header with month name and navigation arrows */}
             <CardHeader className="border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-2xl font-bold text-[#1A4D5E]">
                   {format(currentDate, 'MMMM yyyy')}
                 </CardTitle>
                 <div className="flex gap-2">
+                  {/* Previous month */}
                   <Button
                     variant="outline"
                     size="icon"
@@ -222,6 +331,8 @@ export default function Calendar() {
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </Button>
+
+                  {/* Next month */}
                   <Button
                     variant="outline"
                     size="icon"
@@ -233,17 +344,25 @@ export default function Calendar() {
                 </div>
               </div>
             </CardHeader>
+
+            {/* Calendar body: weekday labels + day cells */}
             <CardContent className="p-4">
+              {/* Weekday labels row */}
               <div className="grid grid-cols-7 gap-2 mb-2">
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                  <div key={day} className="text-center text-sm font-semibold text-[#78909C] py-2">
+                  <div
+                    key={day}
+                    className="text-center text-sm font-semibold text-[#78909C] py-2"
+                  >
                     {day}
                   </div>
                 ))}
               </div>
+
+              {/* Day cells grid */}
               <div className="grid grid-cols-7 gap-2">
                 {calendarDays.map((day, index) => {
-                  const events = getEventsForDate(day);
+                  const eventsForDay = getEventsForDate(day);
                   const isCurrentMonth = isSameMonth(day, currentDate);
                   const isToday = isSameDay(day, new Date());
                   const isSelected = isSameDay(day, selectedDate);
@@ -260,10 +379,13 @@ export default function Calendar() {
                         ${!isToday && !isSelected ? 'hover:bg-[#F5F5F5]' : ''}
                       `}
                     >
+                      {/* Day number */}
                       <div className="text-sm">{format(day, 'd')}</div>
-                      {events.length > 0 && (
+
+                      {/* Small dots indicating events exist on this day */}
+                      {eventsForDay.length > 0 && (
                         <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex gap-1">
-                          {events.slice(0, 3).map((_, i) => (
+                          {eventsForDay.slice(0, 3).map((_, i) => (
                             <div
                               key={i}
                               className={`w-1.5 h-1.5 rounded-full ${
@@ -281,7 +403,18 @@ export default function Calendar() {
           </Card>
         </div>
 
+        {/* 
+        =======================================
+        RIGHT: SELECTED DAY EVENTS + LEGEND
+        =======================================
+        */}
         <div>
+          {/* 
+          ---------------------------------------
+          SELECTED DATE EVENTS
+          ---------------------------------------
+          Shows all events/assignments/grades for selectedDate
+          */}
           <Card className="shadow-lg border-0 bg-white">
             <CardHeader className="border-b border-gray-100">
               <CardTitle className="text-lg font-bold text-[#1A4D5E]">
@@ -289,6 +422,7 @@ export default function Calendar() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4">
+              {/* No events message */}
               {selectedDateEvents.length === 0 ? (
                 <div className="text-center py-8">
                   <CalendarIcon className="w-12 h-12 text-[#CFD8DC] mx-auto mb-3" />
@@ -296,16 +430,25 @@ export default function Calendar() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {selectedDateEvents.map((event) => {
+                  {selectedDateEvents.map((event: any) => {
+                    /*
+                    We distinguish between:
+                    - Grade-based "events" (have assignment_name)
+                    - Assignment events (have name + assignment structure)
+                    - Calendar events (generic, have title/description/start/end)
+                    */
+
+                    // GRADE EVENT
                     if (event.assignment_name) {
-                      // Grade event
                       return (
                         <div
                           key={event.id}
                           className="p-3 rounded-lg border border-gray-100 hover:border-[#00796B] hover:bg-[#E0F2F1] transition-all duration-200"
                         >
                           <div className="flex items-start justify-between mb-2">
-                            <h4 className="font-semibold text-[#37474F]">{event.assignment_name}</h4>
+                            <h4 className="font-semibold text-[#37474F]">
+                              {event.assignment_name}
+                            </h4>
                             <Badge variant="outline" className="text-xs">
                               {event.assignment_type}
                             </Badge>
@@ -316,11 +459,15 @@ export default function Calendar() {
                           <p className="text-sm text-[#78909C]">
                             {event.student_name}
                           </p>
+
+                          {/* Badge if this is the due date */}
                           {event.due_date && isSameDay(new Date(event.due_date), selectedDate) && (
                             <Badge className="mt-2 bg-orange-100 text-orange-800 text-xs">
                               Due Date
                             </Badge>
                           )}
+
+                          {/* Badge if this is the graded date */}
                           {event.graded_date && isSameDay(new Date(event.graded_date), selectedDate) && (
                             <Badge className="mt-2 bg-green-100 text-green-800 text-xs">
                               Graded: {event.percentage?.toFixed(0)}%
@@ -328,19 +475,26 @@ export default function Calendar() {
                           )}
                         </div>
                       );
-                    } else if (event.name) {
-                      // Assignment event
+                    } 
+                    
+                    // ASSIGNMENT EVENT (from /api/assignments)
+                    else if (event.name) {
                       return (
                         <div
                           key={event._id}
                           className="p-3 rounded-lg border border-gray-100 hover:border-[#00796B] hover:bg-[#E0F2F1] transition-all duration-200"
-                          style={{ borderLeftColor: event.completed ? '#4CAF50' : '#FF9800', borderLeftWidth: '4px' }}
+                          style={{
+                            borderLeftColor: event.completed ? '#4CAF50' : '#FF9800',
+                            borderLeftWidth: '4px',
+                          }}
                         >
                           <div className="flex items-start justify-between mb-2">
                             <h4 className="font-semibold text-[#37474F] flex items-center gap-2">
                               {event.name}
                               {event.completed && (
-                                <Badge className="bg-green-100 text-green-800 text-xs">Done</Badge>
+                                <Badge className="bg-green-100 text-green-800 text-xs">
+                                  Done
+                                </Badge>
                               )}
                             </h4>
                             <Badge className="bg-orange-100 text-orange-800 text-xs">
@@ -350,6 +504,8 @@ export default function Calendar() {
                           <p className="text-sm text-[#78909C] mb-3">
                             Due: {format(new Date(event.dueDate), 'MMM d, h:mm a')}
                           </p>
+
+                          {/* Mark assignment as done */}
                           {!event.completed && (
                             <Button
                               variant="outline"
@@ -361,10 +517,15 @@ export default function Calendar() {
                               Mark as Done
                             </Button>
                           )}
+
+                          {/* Undo completion */}
                           {event.completed && (
                             <div className="flex items-center gap-3 mt-2">
                               {event.completedAt && (
-                                <p className="text-xs text-green-700">Completed {format(new Date(event.completedAt), 'MMM d, h:mm a')}</p>
+                                <p className="text-xs text-green-700">
+                                  Completed{' '}
+                                  {format(new Date(event.completedAt), 'MMM d, h:mm a')}
+                                </p>
                               )}
                               <Button
                                 variant="outline"
@@ -379,8 +540,10 @@ export default function Calendar() {
                           )}
                         </div>
                       );
-                    } else {
-                      // Calendar event
+                    } 
+                    
+                    // GENERIC CALENDAR EVENT
+                    else {
                       return (
                         <div
                           key={event.id}
@@ -388,15 +551,20 @@ export default function Calendar() {
                           style={{ borderLeftColor: event.color, borderLeftWidth: '4px' }}
                         >
                           <div className="flex items-start justify-between mb-2">
-                            <h4 className="font-semibold text-[#37474F]">{event.title}</h4>
+                            <h4 className="font-semibold text-[#37474F]">
+                              {event.title}
+                            </h4>
                           </div>
+
                           {event.description && (
                             <p className="text-sm text-[#546E7A] mb-1">
                               {event.description}
                             </p>
                           )}
+
                           <p className="text-sm text-[#78909C]">
-                            {format(new Date(event.start), 'h:mm a')} - {format(new Date(event.end), 'h:mm a')}
+                            {format(new Date(event.start), 'h:mm a')} -{' '}
+                            {format(new Date(event.end), 'h:mm a')}
                           </p>
                         </div>
                       );
@@ -407,9 +575,17 @@ export default function Calendar() {
             </CardContent>
           </Card>
 
+          {/* 
+          ---------------------------------------
+          LEGEND CARD
+          ---------------------------------------
+          Explains the visual cues used in calendar tiles.
+          */}
           <Card className="shadow-lg border-0 bg-white mt-6">
             <CardHeader className="border-b border-gray-100">
-              <CardTitle className="text-lg font-bold text-[#1A4D5E]">Legend</CardTitle>
+              <CardTitle className="text-lg font-bold text-[#1A4D5E]">
+                Legend
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-4">
               <div className="space-y-2">
@@ -418,18 +594,4 @@ export default function Calendar() {
                   <span className="text-sm text-[#546E7A]">Has Events</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded bg-[#00796B]" />
-                  <span className="text-sm text-[#546E7A]">Today</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded bg-[#E0F2F1]" />
-                  <span className="text-sm text-[#546E7A]">Selected</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
-  );
-}
+                  <div className="w-6 h-6 rounded bg-[#0]()
