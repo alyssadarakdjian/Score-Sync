@@ -14,26 +14,16 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Get logged-in user info
         const user = JSON.parse(localStorage.getItem("user"));
         if (!user || !user._id) {
           console.warn("No user logged in");
           return;
         }
 
-        // Define base API URL (use 127.0.0.1 to avoid macOS localhost issues)
         const API_BASE = "http://127.0.0.1:5050/api";
 
-        // Fetch all data in parallel
-        const [studentsRes, coursesRes, gradesRes] = await Promise.all([
-          axios.get(`${API_BASE}/students`),
-          axios.get(`${API_BASE}/courses/user/${user._id}`),
-          axios.get(`${API_BASE}/grades`),
-        ]);
-
-        setStudents(studentsRes.data || []);
+        const coursesRes = await axios.get(`${API_BASE}/courses/user/${user._id}`);
         setCourses(coursesRes.data || []);
-        setGrades(gradesRes.data || []);
       } catch (error) {
         console.error("❌ Error fetching dashboard data:", error);
       }

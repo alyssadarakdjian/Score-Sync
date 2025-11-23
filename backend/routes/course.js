@@ -20,15 +20,25 @@ router.get("/user/:id", async (req, res) => {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // If user has a 'courses' field, return only those
-    if (user.courses && user.courses.length > 0) {
-      const userCourses = await Course.find({
-        course_code: { $in: user.courses },
-      });
-      return res.json(userCourses);
+    // Normalize user.courses
+    let userCourses = [];
+    if (user.courses) {
+      if (Array.isArray(user.courses)) {
+        userCourses = user.courses;
+      } else if (typeof user.courses === "string") {
+        userCourses = [user.courses];
+      }
     }
 
-    res.json([]); // user exists but has no courses
+    if (userCourses.length === 0) {
+      return res.json([]);
+    }
+
+    const courses = await Course.find({
+      course_code: { $in: userCourses },
+    });
+
+    res.json(courses);
   } catch (err) {
     console.error("Error fetching user courses:", err);
     res.status(500).json({ message: "Server error" });

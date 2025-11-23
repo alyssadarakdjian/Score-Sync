@@ -12,11 +12,16 @@ export default function Courses() {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const queryClient = useQueryClient();
 
+  // Retrieve the logged-in user from localStorage
+  const storedUser = JSON.parse(localStorage.getItem("user"));
+  const userId = storedUser?._id;
+
   const { data: courses = [], isLoading } = useQuery({
     queryKey: ['courses'],
     queryFn: async () => {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/courses`);
-      if (!res.ok) throw new Error('Failed to fetch courses');
+      if (!userId) return [];
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/courses/user/${userId}`);
+      if (!res.ok) throw new Error('Failed to fetch user courses');
       return res.json();
     },
   });

@@ -6,7 +6,7 @@ const router = express.Router();
 // Register
 router.post("/register", async (req, res) => {
   try {
-    const { email, password, fullname, studentId, dateOfBirth } = req.body;
+    const { email, password, fullname, studentId, dateOfBirth, courses = [] } = req.body;
 
     if (!email || !password || !studentId || !dateOfBirth)
       return res.status(400).json({ message: "Missing required fields" });
@@ -25,6 +25,7 @@ router.post("/register", async (req, res) => {
       fullname,
       studentId,
       dateOfBirth: dob,
+      courses,
     });
     await newUser.save();
 
@@ -52,6 +53,7 @@ router.post("/login", async (req, res) => {
         fullname: user.fullname,
         studentId: user.studentId,
         dateOfBirth: user.dateOfBirth,
+        courses: user.courses || [],
       },
     });
   } catch (err) {
