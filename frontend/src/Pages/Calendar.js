@@ -54,13 +54,22 @@ export default function Calendar() {
   ----------------------------------------------------------
   FETCH CALENDAR EVENTS (From your /api/events endpoint)
   ----------------------------------------------------------
-  These are generic events (meetings, exams, etc.) tied to "demo-user".
+  These are generic events (meetings, exams, etc.) tied to the logged-in user.
   */
   const { data: events = [], refetch: refetchEvents } = useQuery({
     queryKey: ['events'],
     queryFn: async () => {
       try {
-        const res = await fetch('/api/events/demo-user');
+        const userEmail = localStorage.getItem('scoreSyncEmail');
+        if (!userEmail) return [];
+        
+        // Get user ID
+        const userRes = await fetch(`/api/auth/user?email=${encodeURIComponent(userEmail)}`);
+        if (!userRes.ok) return [];
+        const userData = await userRes.json();
+        const userId = userData.user._id;
+        
+        const res = await fetch(`/api/events/${userId}`);
         if (!res.ok) return [];
         return res.json();
       } catch (err) {
@@ -80,7 +89,16 @@ export default function Calendar() {
     queryKey: ['assignments'],
     queryFn: async () => {
       try {
-        const res = await fetch('/api/assignments/demo-user');
+        const userEmail = localStorage.getItem('scoreSyncEmail');
+        if (!userEmail) return [];
+        
+        // Get user ID
+        const userRes = await fetch(`/api/auth/user?email=${encodeURIComponent(userEmail)}`);
+        if (!userRes.ok) return [];
+        const userData = await userRes.json();
+        const userId = userData.user._id;
+        
+        const res = await fetch(`/api/assignments/${userId}`);
         if (!res.ok) return [];
         return res.json();
       } catch (err) {

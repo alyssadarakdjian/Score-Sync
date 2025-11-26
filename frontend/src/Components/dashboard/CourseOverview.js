@@ -13,7 +13,8 @@ const subjectColors = {
 };
 
 export default function CourseOverview({ courses }) {
-  const activeCourses = courses.filter((c) => c.status === "active").slice(0, 5);
+  // Show all active courses (no limit)
+  const activeCourses = courses.filter((c) => c.status === "active");
 
   return (
     <div className="shadow-lg border border-gray-100 bg-white rounded-xl overflow-hidden">
@@ -28,7 +29,7 @@ export default function CourseOverview({ courses }) {
           <div className="space-y-3">
             {activeCourses.map((course) => (
               <div
-                key={course.id}
+                key={course._id || course.id}
                 className="p-3 rounded-lg border border-gray-100 hover:border-[#00796B] hover:bg-[#E0F2F1] transition-all duration-200"
               >
                 <div className="flex items-start gap-3">
