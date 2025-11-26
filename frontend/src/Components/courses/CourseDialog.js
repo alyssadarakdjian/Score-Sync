@@ -20,16 +20,10 @@ export default function CourseDialog({ open, onOpenChange, course, onSave, isLoa
     course_code: "",
     course_name: "",
     description: "",
-    teacher_name: "",
-    teacher_email: "",
-    grade_level: "All",
     subject: "Mathematics",
     credits: 1,
     semester: "Fall",
-    academic_year: "2024-2025",
-    room_number: "",
     schedule: "",
-    max_students: 30,
     status: "active"
   });
 
@@ -41,16 +35,10 @@ export default function CourseDialog({ open, onOpenChange, course, onSave, isLoa
         course_code: "",
         course_name: "",
         description: "",
-        teacher_name: "",
-        teacher_email: "",
-        grade_level: "All",
         subject: "Mathematics",
         credits: 1,
         semester: "Fall",
-        academic_year: "2024-2025",
-        room_number: "",
         schedule: "",
-        max_students: 30,
         status: "active"
       });
     }
@@ -132,47 +120,6 @@ export default function CourseDialog({ open, onOpenChange, course, onSave, isLoa
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="teacher_name">Teacher Name *</Label>
-                <Input
-                  id="teacher_name"
-                  value={formData.teacher_name}
-                  onChange={(e) => setFormData({ ...formData, teacher_name: e.target.value })}
-                  required
-                  className="border-2 focus:border-[#00796B]"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="teacher_email">Teacher Email</Label>
-                <Input
-                  id="teacher_email"
-                  type="email"
-                  value={formData.teacher_email}
-                  onChange={(e) => setFormData({ ...formData, teacher_email: e.target.value })}
-                  className="border-2 focus:border-[#00796B]"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="grade_level">Grade Level</Label>
-                <Select
-                  value={formData.grade_level}
-                  onValueChange={(value) => setFormData({ ...formData, grade_level: value })}
-                >
-                  <SelectTrigger className="border-2 focus:border-[#00796B]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="All">All Grades</SelectItem>
-                    <SelectItem value="9th">9th Grade</SelectItem>
-                    <SelectItem value="10th">10th Grade</SelectItem>
-                    <SelectItem value="11th">11th Grade</SelectItem>
-                    <SelectItem value="12th">12th Grade</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="credits">Credits</Label>
                 <Input
                   id="credits"
@@ -184,20 +131,6 @@ export default function CourseDialog({ open, onOpenChange, course, onSave, isLoa
                   className="border-2 focus:border-[#00796B]"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="max_students">Max Students</Label>
-                <Input
-                  id="max_students"
-                  type="number"
-                  value={formData.max_students}
-                  onChange={(e) => setFormData({ ...formData, max_students: parseInt(e.target.value) })}
-                  min="1"
-                  className="border-2 focus:border-[#00796B]"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="semester">Semester</Label>
                 <Select
@@ -214,26 +147,6 @@ export default function CourseDialog({ open, onOpenChange, course, onSave, isLoa
                     <SelectItem value="Full Year">Full Year</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="academic_year">Academic Year *</Label>
-                <Input
-                  id="academic_year"
-                  value={formData.academic_year}
-                  onChange={(e) => setFormData({ ...formData, academic_year: e.target.value })}
-                  required
-                  placeholder="2024-2025"
-                  className="border-2 focus:border-[#00796B]"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="room_number">Room Number</Label>
-                <Input
-                  id="room_number"
-                  value={formData.room_number}
-                  onChange={(e) => setFormData({ ...formData, room_number: e.target.value })}
-                  className="border-2 focus:border-[#00796B]"
-                />
               </div>
             </div>
 

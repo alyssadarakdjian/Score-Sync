@@ -34,8 +34,11 @@ const navigationItems = [
   { title: "Reports", url: "/Reports", icon: BarChart3 },
 ];
 
-export default function Layout({ children, currentPageName, fullname, email, onLogout }) {
+export default function Layout({ children, currentPageName, fullname, email, onLogout, isAdmin = false }) {
   const location = useLocation();
+  const filteredItems = isAdmin
+    ? navigationItems.filter(item => item.title !== 'Dashboard')
+    : navigationItems;
 
   return (
     <SidebarProvider>
@@ -57,7 +60,7 @@ export default function Layout({ children, currentPageName, fullname, email, onL
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {navigationItems.map((item) => (
+                  {filteredItems.map((item) => (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton
                         asChild

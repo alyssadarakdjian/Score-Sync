@@ -7,47 +7,104 @@ import { Plus, Search } from "lucide-react";
 import CourseTable from "../Components/courses/CourseTable";
 import CourseDialog from "../Components/courses/CourseDialog";
 
-export default function Courses() {
+export default function Courses({ readOnly = false, teacherEmail = '', isAdmin = false }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: courses = [], isLoading } = useQuery({
-    queryKey: ['courses'],
-    queryFn: () => base44.entities.Course.list('-created_date'),
+    queryKey: ['courses', { admin: isAdmin }],
+    queryFn: async () => {
+      if (isAdmin) {
+        const res = await fetch('/api/admin-courses');
+        if (!res.ok) return [];
+        const json = await res.json();
+        return (json.courses || []).map(c => ({ ...c, id: c._id }));
+      }
+      // Non-admin (student) still reads admin courses read-only for now
+      const res = await fetch('/api/admin-courses');
+      if (!res.ok) return [];
+      const json = await res.json();
+      return (json.courses || []).map(c => ({ ...c, id: c._id }));
+      // If you want to keep Base44 for students instead, replace with base44.entities.Course.list('-created_date')
+    },
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Course.create(data),
+    mutationFn: async (data) => {
+      if (!isAdmin) return Promise.reject(new Error('Not authorized'));
+      const res = await fetch('/api/admin-courses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Email': localStorage.getItem('scoreSyncEmail') || ''
+        },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('Failed to create course');
+      return res.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      queryClient.invalidateQueries({ queryKey: ['courses', { admin: isAdmin }] });
       setDialogOpen(false);
       setSelectedCourse(null);
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Course.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      if (!isAdmin) return Promise.reject(new Error('Not authorized'));
+      const res = await fetch(`/api/admin-courses/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Email': localStorage.getItem('scoreSyncEmail') || ''
+        },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('Failed to update course');
+      return res.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      queryClient.invalidateQueries({ queryKey: ['courses', { admin: isAdmin }] });
       setDialogOpen(false);
       setSelectedCourse(null);
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Course.delete(id),
+    mutationFn: async (id) => {
+      if (!isAdmin) return Promise.reject(new Error('Not authorized'));
+      const res = await fetch(`/api/admin-courses/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'X-User-Email': localStorage.getItem('scoreSyncEmail') || ''
+        }
+      });
+      if (!res.ok) throw new Error('Failed to delete course');
+      return res.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      queryClient.invalidateQueries({ queryKey: ['courses', { admin: isAdmin }] });
     },
   });
 
-  const filteredCourses = courses.filter(course =>
-    `${course.course_name} ${course.course_code} ${course.teacher_name} ${course.subject}`
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
+  const filteredCourses = courses
+    .filter(course =>
+      `${course.course_name} ${course.course_code} ${course.teacher_name} ${course.subject}`
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase())
+    )
+    .filter(course => {
+      // If teacherEmail provided (admin/teacher), optionally show only their courses
+      if (teacherEmail && readOnly === false) return true; // admin sees all for now
+      if (teacherEmail && readOnly === true) {
+        // student view: just show courses (no restriction). Could refine later.
+        return true;
+      }
+      return true;
+    });
 
   const handleSave = (data) => {
     if (selectedCourse) {
@@ -75,16 +132,18 @@ export default function Courses() {
           <h2 className="text-2xl font-bold text-[#1A4D5E]">Course Management</h2>
           <p className="text-[#78909C] mt-1">Manage courses and class information</p>
         </div>
-        <Button
-          onClick={() => {
-            setSelectedCourse(null);
-            setDialogOpen(true);
-          }}
-          className="bg-[#00796B] hover:bg-[#00695C] shadow-lg"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Course
-        </Button>
+        {!readOnly && (
+          <Button
+            onClick={() => {
+              setSelectedCourse(null);
+              setDialogOpen(true);
+            }}
+            className="bg-[#00796B] hover:bg-[#00695C] shadow-lg"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Course
+          </Button>
+        )}
       </div>
 
       <div className="relative">
@@ -103,15 +162,18 @@ export default function Courses() {
         onEdit={handleEdit}
         onDelete={handleDelete}
         isLoading={isLoading}
+        readOnly={readOnly}
       />
 
-      <CourseDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        course={selectedCourse}
-        onSave={handleSave}
-        isLoading={createMutation.isPending || updateMutation.isPending}
-      />
+      {!readOnly && (
+        <CourseDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          course={selectedCourse}
+          onSave={handleSave}
+          isLoading={createMutation.isPending || updateMutation.isPending}
+        />
+      )}
     </div>
   );
 }

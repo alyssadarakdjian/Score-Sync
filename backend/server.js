@@ -6,6 +6,7 @@ import assignmentRoutes from "./routes/assignments.js";
 import authRoutes from "./routes/auth.js"; //imports the authentication from the user
 import eventRoutes from "./routes/events.js";
 import gradesRoutes from "./routes/grades.js";
+import adminCoursesRoutes from "./routes/adminCourses.js";
 
 dotenv.config();
 
@@ -39,6 +40,7 @@ const MONGO_URI = process.env.MONGO_URI;
   app.use("/api/events", eventRoutes);
   app.use("/api/assignments", assignmentRoutes);
   app.use("/api/grades", gradesRoutes);
+  app.use("/api/admin-courses", adminCoursesRoutes);
 
     // Bind to IPv4 to avoid localhost/IPv6 quirks
     app.listen(PORT, "0.0.0.0", () => {

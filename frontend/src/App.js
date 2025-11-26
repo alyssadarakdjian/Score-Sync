@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useNavigate, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Dashboard from "./Pages/Dashboard";
 import Courses from "./Pages/Courses";
@@ -18,7 +18,7 @@ function AppContent() {
   const navigate = useNavigate(); // initialize navigate
 
   const [mode, setMode] = useState("login");
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(() => localStorage.getItem('scoreSyncRole') === 'admin');
   const [adminMsg, setAdminMsg] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -128,21 +128,15 @@ function AppContent() {
 
   const DashboardLayout = (
     <Layout
-      currentPageName={isAdmin ? "Admin Dashboard" : "Dashboard"}
+      currentPageName={isAdmin ? "Courses" : "Dashboard"}
       fullname={storedName}
       email={storedEmail}
       onLogout={handleLogout}
+      isAdmin={isAdmin}
     >
       {isAdmin ? (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 text-gray-800">
-          <h1 className="text-3xl font-bold mb-4">Admin Dashboard (Coming Soon)</h1>
-          <button
-            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
-            onClick={handleLogout}
-          >
-            Logout
-          </button>
-        </div>
+        // Admin sees Courses management directly instead of a separate dashboard
+        <Courses readOnly={false} isAdmin={true} />
       ) : (
         <Dashboard onLogout={handleLogout} email={email} />
       )}
@@ -271,12 +265,12 @@ function AppContent() {
       {/* Dashboard route */}
       <Route
         path="/Dashboard"
-        element={authenticated ? DashboardLayout : <div>Unauthorized</div>}
+        element={authenticated ? (isAdmin ? <Navigate to="/Courses" replace /> : DashboardLayout) : <div>Unauthorized</div>}
       />
 
       {/* Other routes */}
       {[
-        { path: "/Courses", page: <Courses />, name: "Courses" },
+        { path: "/Courses", page: <Courses readOnly={!isAdmin} teacherEmail={storedEmail} isAdmin={isAdmin} />, name: "Courses" },
         { path: "/Grades", page: <Grades readOnly={!isAdmin} />, name: "Grades" },
         { path: "/Calendar", page: <Calendar />, name: "Calendar" },
         { path: "/Messages", page: <Messages />, name: "Messages" },
@@ -293,6 +287,7 @@ function AppContent() {
                 fullname={storedName}
                 email={storedEmail}
                 onLogout={handleLogout}
+                isAdmin={isAdmin}
               >
                 {page}
               </Layout>

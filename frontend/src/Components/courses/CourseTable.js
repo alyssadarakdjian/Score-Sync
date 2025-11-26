@@ -23,7 +23,7 @@ const subjectColors = {
   "Computer Science": "bg-indigo-100 text-indigo-800"
 };
 
-export default function CourseTable({ courses, onEdit, onDelete, isLoading }) {
+export default function CourseTable({ courses, onEdit, onDelete, isLoading, readOnly = false }) {
   if (isLoading) {
     return (
       <Card className="shadow-lg border-0">
@@ -48,16 +48,19 @@ export default function CourseTable({ courses, onEdit, onDelete, isLoading }) {
                 <TableHead className="font-semibold text-[#546E7A]">Course Code</TableHead>
                 <TableHead className="font-semibold text-[#546E7A]">Course Name</TableHead>
                 <TableHead className="font-semibold text-[#546E7A]">Subject</TableHead>
-                <TableHead className="font-semibold text-[#546E7A]">Teacher</TableHead>
-                <TableHead className="font-semibold text-[#546E7A]">Grade Level</TableHead>
+                {readOnly && (
+                  <TableHead className="font-semibold text-[#546E7A]">Teacher</TableHead>
+                )}
                 <TableHead className="font-semibold text-[#546E7A]">Status</TableHead>
-                <TableHead className="font-semibold text-[#546E7A]">Actions</TableHead>
+                {!readOnly && (
+                  <TableHead className="font-semibold text-[#546E7A]">Actions</TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
               {courses.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-[#78909C]">
+                  <TableCell colSpan={readOnly ? 5 : 5} className="text-center py-8 text-[#78909C]">
                     No courses found
                   </TableCell>
                 </TableRow>
@@ -71,33 +74,36 @@ export default function CourseTable({ courses, onEdit, onDelete, isLoading }) {
                         {course.subject}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-[#546E7A]">{course.teacher_name}</TableCell>
-                    <TableCell className="text-[#546E7A]">{course.grade_level}</TableCell>
+                    {readOnly && (
+                      <TableCell className="text-[#546E7A]">{course.teacher_name}</TableCell>
+                    )}
                     <TableCell>
                       <Badge className={`${statusColors[course.status]} border`}>
                         {course.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onEdit(course)}
-                          className="hover:bg-[#E0F2F1] hover:text-[#00796B]"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onDelete(course.id)}
-                          className="hover:bg-[#FFEBEE] hover:text-[#D32F2F]"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                    {!readOnly && (
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onEdit(course)}
+                            className="hover:bg-[#E0F2F1] hover:text-[#00796B]"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onDelete(course.id)}
+                            className="hover:bg-[#FFEBEE] hover:text-[#D32F2F]"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
