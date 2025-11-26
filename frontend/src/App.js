@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Dashboard from "./Pages/Dashboard";
 import Courses from "./Pages/Courses";
 import CourseDetail from "./Pages/CourseDetail";
+import StudentGrades from "./Pages/StudentGrades";
 import Grades from "./Pages/Grades";
 import Calendar from "./Pages/Calendar";
 import Messages from "./Pages/Messages";
@@ -273,6 +274,7 @@ function AppContent() {
       {[
         { path: "/Courses", page: <Courses readOnly={!isAdmin} teacherEmail={storedEmail} isAdmin={isAdmin} />, name: "Courses" },
         { path: "/Courses/:courseId", page: <CourseDetail />, name: "Course Detail", adminOnly: true },
+        { path: "/Courses/:courseId/student/:studentId/grades", page: <StudentGrades />, name: "Student Grades", adminOnly: true },
         { path: "/Grades", page: <Grades readOnly={!isAdmin} />, name: "Grades" },
         { path: "/Calendar", page: <Calendar />, name: "Calendar" },
         { path: "/Messages", page: <Messages />, name: "Messages" },

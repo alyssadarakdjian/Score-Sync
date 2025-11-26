@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../Components/ui/card"
 import { Button } from "../Components/ui/button";
 import { Input } from "../Components/ui/input";
 import { Badge } from "../Components/ui/badge";
-import { ArrowLeft, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Search, Trash2, GraduationCap } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../Components/ui/table";
 
 export default function CourseDetail() {
@@ -16,6 +16,8 @@ export default function CourseDetail() {
   const [selectedStudentEmail, setSelectedStudentEmail] = useState("");
   const [studentSearchTerm, setStudentSearchTerm] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [gradeDialogOpen, setGradeDialogOpen] = useState(false);
+  const [selectedStudentForGrade, setSelectedStudentForGrade] = useState(null);
 
   // Fetch course details
   const { data: course, isLoading: courseLoading } = useQuery({
@@ -299,14 +301,29 @@ export default function CourseDetail() {
                       <TableCell className="text-[#546E7A]">{student.email}</TableCell>
                       <TableCell className="text-[#546E7A]">{student.studentId}</TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveStudent(student._id)}
-                          className="hover:bg-[#FFEBEE] hover:text-[#D32F2F]"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setSelectedStudentForGrade(student);
+                              navigate(`/Courses/${courseId}/student/${student._id}/grades`);
+                            }}
+                            className="hover:bg-[#E3F2FD] hover:text-[#1976D2]"
+                            title="Manage Grades"
+                          >
+                            <GraduationCap className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveStudent(student._id)}
+                            className="hover:bg-[#FFEBEE] hover:text-[#D32F2F]"
+                            title="Remove Student"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))

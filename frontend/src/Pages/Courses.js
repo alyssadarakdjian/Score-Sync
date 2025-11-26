@@ -12,11 +12,12 @@ export default function Courses({ readOnly = false, teacherEmail = '', isAdmin =
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const queryClient = useQueryClient();
+  
+  const userEmail = localStorage.getItem('scoreSyncEmail') || '';
 
   const { data: courses = [], isLoading } = useQuery({
     queryKey: ['courses', { admin: isAdmin }],
     queryFn: async () => {
-      const userEmail = localStorage.getItem('scoreSyncEmail') || '';
       if (isAdmin) {
         const res = await fetch('/api/admin-courses', {
           headers: {
@@ -29,7 +30,7 @@ export default function Courses({ readOnly = false, teacherEmail = '', isAdmin =
         console.log('Admin courses loaded:', mapped);
         return mapped;
       }
-      // Student - fetch only their enrolled courses
+      // Student - fetch courses and their grades
       const res = await fetch('/api/admin-courses', {
         headers: {
           'X-User-Email': userEmail
@@ -37,10 +38,38 @@ export default function Courses({ readOnly = false, teacherEmail = '', isAdmin =
       });
       if (!res.ok) return [];
       const json = await res.json();
-      const mapped = (json.courses || []).map(c => ({ ...c, id: c._id }));
-      console.log('Student courses loaded:', mapped);
-      return mapped;
-      // If you want to keep Base44 for students instead, replace with base44.entities.Course.list('-created_date')
+      const courses = (json.courses || []).map(c => ({ ...c, id: c._id }));
+      
+      // Fetch student's user ID and grades
+      const userRes = await fetch(`/api/auth/user?email=${encodeURIComponent(userEmail)}`);
+      if (userRes.ok) {
+        const userData = await userRes.json();
+        const studentId = userData.user._id;
+        
+        // Fetch grades for all courses
+        const gradesRes = await fetch(`/api/course-grades/student/${studentId}`);
+        if (gradesRes.ok) {
+          const gradesData = await gradesRes.json();
+          const gradesMap = {};
+          gradesData.grades.forEach(g => {
+            gradesMap[g.courseId._id] = {
+              averageGrade: g.overallGrade,
+              letterGrade: g.letterGrade
+            };
+          });
+          
+          // Attach grades to courses
+          courses.forEach(course => {
+            if (gradesMap[course.id]) {
+              course.averageGrade = gradesMap[course.id].averageGrade;
+              course.letterGrade = gradesMap[course.id].letterGrade;
+            }
+          });
+        }
+      }
+      
+      console.log('Student courses loaded with grades:', courses);
+      return courses;
     },
   });
 

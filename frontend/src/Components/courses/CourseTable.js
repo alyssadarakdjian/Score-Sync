@@ -28,9 +28,7 @@ export default function CourseTable({ courses, onEdit, onDelete, isLoading, read
   const navigate = useNavigate();
 
   const handleRowClick = (courseId) => {
-    console.log('Row clicked:', { courseId, readOnly, navigating: !readOnly });
     if (!readOnly) {
-      console.log('Navigating to:', `/Courses/${courseId}`);
       navigate(`/Courses/${courseId}`);
     }
   };
@@ -60,7 +58,10 @@ export default function CourseTable({ courses, onEdit, onDelete, isLoading, read
                 <TableHead className="font-semibold text-[#546E7A]">Course Name</TableHead>
                 <TableHead className="font-semibold text-[#546E7A]">Subject</TableHead>
                 {readOnly && (
-                  <TableHead className="font-semibold text-[#546E7A]">Teacher</TableHead>
+                  <>
+                    <TableHead className="font-semibold text-[#546E7A]">Teacher</TableHead>
+                    <TableHead className="font-semibold text-[#546E7A]">Grade</TableHead>
+                  </>
                 )}
                 <TableHead className="font-semibold text-[#546E7A]">Status</TableHead>
                 {!readOnly && (
@@ -71,7 +72,7 @@ export default function CourseTable({ courses, onEdit, onDelete, isLoading, read
             <TableBody>
               {courses.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={readOnly ? 5 : 5} className="text-center py-8 text-[#78909C]">
+                  <TableCell colSpan={readOnly ? 6 : 5} className="text-center py-8 text-[#78909C]">
                     No courses found
                   </TableCell>
                 </TableRow>
@@ -95,7 +96,24 @@ export default function CourseTable({ courses, onEdit, onDelete, isLoading, read
                       </Badge>
                     </TableCell>
                     {readOnly && (
-                      <TableCell className="text-[#546E7A]">{course.teacher_name}</TableCell>
+                      <>
+                        <TableCell className="text-[#546E7A]">{course.teacher_name}</TableCell>
+                        <TableCell className="font-semibold text-[#37474F]">
+                          {course.averageGrade !== undefined ? (
+                            <Badge className={
+                              course.averageGrade >= 90 ? 'bg-green-100 text-green-800' :
+                              course.averageGrade >= 80 ? 'bg-blue-100 text-blue-800' :
+                              course.averageGrade >= 70 ? 'bg-yellow-100 text-yellow-800' :
+                              course.averageGrade >= 60 ? 'bg-orange-100 text-orange-800' :
+                              'bg-red-100 text-red-800'
+                            }>
+                              {course.averageGrade.toFixed(1)}% ({course.letterGrade})
+                            </Badge>
+                          ) : (
+                            <span className="text-[#78909C] text-sm">No grade</span>
+                          )}
+                        </TableCell>
+                      </>
                     )}
                     <TableCell>
                       <Badge className={`${statusColors[course.status]} border`}>
