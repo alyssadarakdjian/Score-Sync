@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useNavigate, Navigate } from "r
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Dashboard from "./Pages/Dashboard";
 import Courses from "./Pages/Courses";
+import CourseDetail from "./Pages/CourseDetail";
 import Grades from "./Pages/Grades";
 import Calendar from "./Pages/Calendar";
 import Messages from "./Pages/Messages";
@@ -271,26 +272,31 @@ function AppContent() {
       {/* Other routes */}
       {[
         { path: "/Courses", page: <Courses readOnly={!isAdmin} teacherEmail={storedEmail} isAdmin={isAdmin} />, name: "Courses" },
+        { path: "/Courses/:courseId", page: <CourseDetail />, name: "Course Detail", adminOnly: true },
         { path: "/Grades", page: <Grades readOnly={!isAdmin} />, name: "Grades" },
         { path: "/Calendar", page: <Calendar />, name: "Calendar" },
         { path: "/Messages", page: <Messages />, name: "Messages" },
         { path: "/Reports", page: <Reports />, name: "Reports" },
         { path: "/Students", page: <Students />, name: "Students" },
-      ].map(({ path, page, name }) => (
+      ].map(({ path, page, name, adminOnly }) => (
         <Route
           key={path}
           path={path}
           element={
             authenticated ? (
-              <Layout
-                currentPageName={name}
-                fullname={storedName}
-                email={storedEmail}
-                onLogout={handleLogout}
-                isAdmin={isAdmin}
-              >
-                {page}
-              </Layout>
+              adminOnly && !isAdmin ? (
+                <div>Unauthorized - Admin access required</div>
+              ) : (
+                <Layout
+                  currentPageName={name}
+                  fullname={storedName}
+                  email={storedEmail}
+                  onLogout={handleLogout}
+                  isAdmin={isAdmin}
+                >
+                  {page}
+                </Layout>
+              )
             ) : (
               <div>Unauthorized</div>
             )

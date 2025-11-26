@@ -16,17 +16,30 @@ export default function Courses({ readOnly = false, teacherEmail = '', isAdmin =
   const { data: courses = [], isLoading } = useQuery({
     queryKey: ['courses', { admin: isAdmin }],
     queryFn: async () => {
+      const userEmail = localStorage.getItem('scoreSyncEmail') || '';
       if (isAdmin) {
-        const res = await fetch('/api/admin-courses');
+        const res = await fetch('/api/admin-courses', {
+          headers: {
+            'X-User-Email': userEmail
+          }
+        });
         if (!res.ok) return [];
         const json = await res.json();
-        return (json.courses || []).map(c => ({ ...c, id: c._id }));
+        const mapped = (json.courses || []).map(c => ({ ...c, id: c._id }));
+        console.log('Admin courses loaded:', mapped);
+        return mapped;
       }
-      // Non-admin (student) still reads admin courses read-only for now
-      const res = await fetch('/api/admin-courses');
+      // Student - fetch only their enrolled courses
+      const res = await fetch('/api/admin-courses', {
+        headers: {
+          'X-User-Email': userEmail
+        }
+      });
       if (!res.ok) return [];
       const json = await res.json();
-      return (json.courses || []).map(c => ({ ...c, id: c._id }));
+      const mapped = (json.courses || []).map(c => ({ ...c, id: c._id }));
+      console.log('Student courses loaded:', mapped);
+      return mapped;
       // If you want to keep Base44 for students instead, replace with base44.entities.Course.list('-created_date')
     },
   });

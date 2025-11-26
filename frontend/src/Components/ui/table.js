@@ -16,8 +16,8 @@ export function TableBody({ children }) {
   return <tbody>{children}</tbody>;
 }
 
-export function TableRow({ children, className = "" }) {
-  return <tr className={`border-b last:border-none ${className}`}>{children}</tr>;
+export function TableRow({ children, className = "", ...props }) {
+  return <tr className={`border-b last:border-none ${className}`} {...props}>{children}</tr>;
 }
 
 export function TableHead({ children, className = "" }) {

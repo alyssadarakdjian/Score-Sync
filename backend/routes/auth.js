@@ -108,4 +108,16 @@ router.get("/user", async (req, res) => {
   }
 });
 
+// Get all students (for admin to add to courses)
+router.get("/students", async (req, res) => {
+  try {
+    const students = await User.find({ role: 'student' })
+      .select('fullname email studentId _id')
+      .sort({ fullname: 1 });
+    res.json({ students });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 export default router;

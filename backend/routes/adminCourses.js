@@ -19,10 +19,33 @@ async function requireAdmin(req, res, next) {
   }
 }
 
-// GET all courses (admins & students can view)
-router.get('/', async (_req, res) => {
+// GET all courses (admins see all, students see only their enrolled courses)
+router.get('/', async (req, res) => {
   try {
-    const courses = await AdminCourse.find().sort({ createdAt: -1 });
+    const userEmail = req.header('x-user-email');
+    
+    // If no email header, return all courses (public view)
+    if (!userEmail) {
+      const courses = await AdminCourse.find().sort({ createdAt: -1 });
+      return res.json({ courses });
+    }
+
+    // Check if user is admin or student
+    const user = await User.findOne({ email: userEmail });
+    
+    if (!user) {
+      const courses = await AdminCourse.find().sort({ createdAt: -1 });
+      return res.json({ courses });
+    }
+
+    // Admins see all courses
+    if (user.role === 'admin') {
+      const courses = await AdminCourse.find().sort({ createdAt: -1 });
+      return res.json({ courses });
+    }
+
+    // Students only see courses they're enrolled in
+    const courses = await AdminCourse.find({ students: user._id }).sort({ createdAt: -1 });
     res.json({ courses });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch courses' });
@@ -59,6 +82,70 @@ router.delete('/:id', requireAdmin, async (req, res) => {
     res.json({ message: 'Course deleted' });
   } catch (err) {
     res.status(500).json({ message: 'Failed to delete course' });
+  }
+});
+
+// GET single course by ID (public)
+router.get('/:id', async (req, res) => {
+  try {
+    const course = await AdminCourse.findById(req.params.id);
+    if (!course) return res.status(404).json({ message: 'Course not found' });
+    res.json({ course });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch course' });
+  }
+});
+
+// GET enrolled students for a course (public)
+router.get('/:id/students', async (req, res) => {
+  try {
+    const course = await AdminCourse.findById(req.params.id).populate('students', 'fullname email studentId');
+    if (!course) return res.status(404).json({ message: 'Course not found' });
+    res.json({ students: course.students || [] });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch students' });
+  }
+});
+
+// ADD student to course by email (admin only)
+router.post('/:id/students', requireAdmin, async (req, res) => {
+  try {
+    const { studentEmail } = req.body;
+    if (!studentEmail) return res.status(400).json({ message: 'Student email required' });
+
+    const student = await User.findOne({ email: studentEmail, role: 'student' });
+    if (!student) return res.status(404).json({ message: 'Student not found or not a student account' });
+
+    const course = await AdminCourse.findById(req.params.id);
+    if (!course) return res.status(404).json({ message: 'Course not found' });
+
+    if (course.students.includes(student._id)) {
+      return res.status(400).json({ message: 'Student already enrolled' });
+    }
+
+    course.students.push(student._id);
+    await course.save();
+    
+    const updatedCourse = await AdminCourse.findById(req.params.id).populate('students', 'name email student_id');
+    res.json({ message: 'Student added', students: updatedCourse.students });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to add student' });
+  }
+});
+
+// REMOVE student from course (admin only)
+router.delete('/:id/students/:studentId', requireAdmin, async (req, res) => {
+  try {
+    const course = await AdminCourse.findById(req.params.id);
+    if (!course) return res.status(404).json({ message: 'Course not found' });
+
+    course.students = course.students.filter(s => s.toString() !== req.params.studentId);
+    await course.save();
+
+    const updatedCourse = await AdminCourse.findById(req.params.id).populate('students', 'fullname email studentId');
+    res.json({ message: 'Student removed', students: updatedCourse.students });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to remove student' });
   }
 });
 

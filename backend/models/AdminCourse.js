@@ -29,6 +29,7 @@ const adminCourseSchema = new mongoose.Schema(
     schedule: { type: String },
     max_students: { type: Number, default: 30 },
     status: { type: String, default: 'active' },
+    students: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   },
   { timestamps: true, collection: 'courses' }
 );

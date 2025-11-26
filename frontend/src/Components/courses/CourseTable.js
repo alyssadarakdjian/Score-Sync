@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
@@ -24,6 +25,16 @@ const subjectColors = {
 };
 
 export default function CourseTable({ courses, onEdit, onDelete, isLoading, readOnly = false }) {
+  const navigate = useNavigate();
+
+  const handleRowClick = (courseId) => {
+    console.log('Row clicked:', { courseId, readOnly, navigating: !readOnly });
+    if (!readOnly) {
+      console.log('Navigating to:', `/Courses/${courseId}`);
+      navigate(`/Courses/${courseId}`);
+    }
+  };
+
   if (isLoading) {
     return (
       <Card className="shadow-lg border-0">
@@ -65,8 +76,17 @@ export default function CourseTable({ courses, onEdit, onDelete, isLoading, read
                   </TableCell>
                 </TableRow>
               ) : (
-                courses.map((course) => (
-                  <TableRow key={course.id} className="hover:bg-[#F5F5F5] transition-colors">
+                courses.map((course) => {
+                  console.log('Rendering course row:', { id: course.id, _id: course._id, code: course.course_code });
+                  return (
+                  <TableRow 
+                    key={course.id || course._id} 
+                    className={`hover:bg-[#F5F5F5] transition-colors ${!readOnly ? 'cursor-pointer' : ''}`}
+                    onClick={(e) => {
+                      console.log('TableRow clicked!', e.target);
+                      handleRowClick(course.id || course._id);
+                    }}
+                  >
                     <TableCell className="font-medium text-[#37474F]">{course.course_code}</TableCell>
                     <TableCell className="font-medium text-[#37474F]">{course.course_name}</TableCell>
                     <TableCell>
@@ -83,7 +103,7 @@ export default function CourseTable({ courses, onEdit, onDelete, isLoading, read
                       </Badge>
                     </TableCell>
                     {!readOnly && (
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <div className="flex gap-2">
                           <Button
                             variant="ghost"
@@ -105,7 +125,8 @@ export default function CourseTable({ courses, onEdit, onDelete, isLoading, read
                       </TableCell>
                     )}
                   </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>
