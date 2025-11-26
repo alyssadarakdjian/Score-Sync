@@ -55,7 +55,17 @@ router.get('/', async (req, res) => {
 // CREATE (admin only)
 router.post('/', requireAdmin, async (req, res) => {
   try {
-    const course = new AdminCourse(req.body);
+    const email = req.header('x-user-email');
+    const adminUser = await User.findOne({ email });
+    
+    // Auto-populate teacher name and email from the admin who created the course
+    const courseData = {
+      ...req.body,
+      teacher_name: adminUser?.fullname || req.body.teacher_name,
+      teacher_email: adminUser?.email || req.body.teacher_email
+    };
+    
+    const course = new AdminCourse(courseData);
     await course.save();
     res.status(201).json({ message: 'Course created', course });
   } catch (err) {
