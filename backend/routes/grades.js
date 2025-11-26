@@ -1,6 +1,7 @@
 // backend/routes/grades.js
 import express from "express";
 import Grade from "../models/Grade.js";
+import User from "../models/User.js";
 
 const router = express.Router();
 
@@ -22,8 +23,23 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST /api/grades
-router.post("/", async (req, res) => {
+// Simple admin check middleware using x-user-email header
+async function requireAdmin(req, res, next) {
+  try {
+    const email = req.header('x-user-email');
+    if (!email) return res.status(401).json({ message: 'Missing admin email header' });
+    const user = await User.findOne({ email });
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin privileges required' });
+    }
+    next();
+  } catch (err) {
+    res.status(500).json({ message: 'Authorization check failed' });
+  }
+}
+
+// POST /api/grades (admin only)
+router.post("/", requireAdmin, async (req, res) => {
   try {
     const {
       studentEmail,
@@ -69,8 +85,8 @@ router.post("/", async (req, res) => {
   }
 });
 
-// PUT /api/grades/:id
-router.put("/:id", async (req, res) => {
+// PUT /api/grades/:id (admin only)
+router.put("/:id", requireAdmin, async (req, res) => {
   try {
     const updated = await Grade.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
@@ -85,8 +101,8 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// DELETE /api/grades/:id
-router.delete("/:id", async (req, res) => {
+// DELETE /api/grades/:id (admin only)
+router.delete("/:id", requireAdmin, async (req, res) => {
   try {
     const deleted = await Grade.findByIdAndDelete(req.params.id);
     if (!deleted) {

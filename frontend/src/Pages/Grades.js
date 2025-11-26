@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "../Components/ui/select";
 
-export default function Grades() {
+export default function Grades({ readOnly = false }) {
   // Search input for filtering grades by student, course, or assignment text
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -116,7 +116,10 @@ export default function Grades() {
       const payload = computeGradePayload(data);
       const res = await fetch("http://localhost:5050/api/grades", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "X-User-Email": localStorage.getItem('scoreSyncEmail') || ''
+        },
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
@@ -146,7 +149,10 @@ export default function Grades() {
       const payload = computeGradePayload(data);
       const res = await fetch(`http://localhost:5050/api/grades/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "X-User-Email": localStorage.getItem('scoreSyncEmail') || ''
+        },
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
@@ -174,6 +180,9 @@ export default function Grades() {
     mutationFn: async (id) => {
       const res = await fetch(`http://localhost:5050/api/grades/${id}`, {
         method: "DELETE",
+        headers: {
+          "X-User-Email": localStorage.getItem('scoreSyncEmail') || ''
+        }
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -263,16 +272,18 @@ export default function Grades() {
         </div>
 
         {/* Open dialog to create a new grade */}
-        <Button
-          onClick={() => {
-            setSelectedGrade(null);
-            setDialogOpen(true);
-          }}
-          className="bg-[#00796B] hover:bg-[#00695C] shadow-lg"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Grade
-        </Button>
+        {!readOnly && (
+          <Button
+            onClick={() => {
+              setSelectedGrade(null);
+              setDialogOpen(true);
+            }}
+            className="bg-[#00796B] hover:bg-[#00695C] shadow-lg"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Grade
+          </Button>
+        )}
       </div>
 
       {/* 
@@ -336,6 +347,7 @@ export default function Grades() {
         onEdit={handleEdit}
         onDelete={handleDelete}
         isLoading={gradesLoading}
+        readOnly={readOnly}
       />
 
       {/* 
@@ -345,15 +357,17 @@ export default function Grades() {
       GradeDialog is used for both creating and editing grades.
       - "grade" prop = selectedGrade for editing or null for new
       */}
-      <GradeDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        grade={selectedGrade}
-        students={students}
-        courses={courses}
-        onSave={handleSave}
-        isLoading={createMutation.isPending || updateMutation.isPending}
-      />
+      {!readOnly && (
+        <GradeDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          grade={selectedGrade}
+          students={students}
+          courses={courses}
+          onSave={handleSave}
+          isLoading={createMutation.isPending || updateMutation.isPending}
+        />
+      )}
     </div>
   );
 }

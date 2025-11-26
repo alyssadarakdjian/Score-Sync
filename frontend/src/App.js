@@ -67,16 +67,16 @@ function AppContent() {
       // Login logic
       if (mode === "login") {
         setAuthenticated(true);
-        setIsAdmin(false);
+        const role = data.user.role || 'student';
+        setIsAdmin(role === 'admin');
         localStorage.setItem("scoreSyncAuth", "true");
         localStorage.setItem("scoreSyncEmail", data.user.email);
-
+        localStorage.setItem("scoreSyncRole", role);
         if (data.user.fullname) {
           localStorage.setItem("scoreSyncName", data.user.fullname);
         } else {
           console.warn("⚠️ No fullname returned from backend:", data.user);
         }
-
         setFullname(data.user.fullname || "");
       }
 
@@ -102,6 +102,7 @@ function AppContent() {
       setIsAdmin(true);
       localStorage.setItem("scoreSyncAuth", "true");
       localStorage.setItem("scoreSyncEmail", email);
+      localStorage.setItem("scoreSyncRole", 'admin');
     } catch (err) {
       setAdminMsg(err.message);
     }
@@ -114,6 +115,7 @@ function AppContent() {
     localStorage.removeItem("scoreSyncAuth");
     localStorage.removeItem("scoreSyncEmail");
     localStorage.removeItem("scoreSyncName");
+    localStorage.removeItem("scoreSyncRole");
     setEmail("");
     setPassword("");
     setMode("login");
@@ -275,7 +277,7 @@ function AppContent() {
       {/* Other routes */}
       {[
         { path: "/Courses", page: <Courses />, name: "Courses" },
-        { path: "/Grades", page: <Grades />, name: "Grades" },
+        { path: "/Grades", page: <Grades readOnly={!isAdmin} />, name: "Grades" },
         { path: "/Calendar", page: <Calendar />, name: "Calendar" },
         { path: "/Messages", page: <Messages />, name: "Messages" },
         { path: "/Reports", page: <Reports />, name: "Reports" },

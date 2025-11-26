@@ -15,7 +15,7 @@ const getGradeColor = (percentage) => {
   return "bg-red-100 text-red-800 border-red-200";
 };
 
-export default function GradeTable({ grades, onEdit, onDelete, isLoading }) {
+export default function GradeTable({ grades, onEdit, onDelete, isLoading, readOnly = false }) {
   if (isLoading) {
     return (
       <Card className="shadow-lg border-0">
@@ -44,13 +44,15 @@ export default function GradeTable({ grades, onEdit, onDelete, isLoading }) {
                 <TableHead className="font-semibold text-[#546E7A]">Score</TableHead>
                 <TableHead className="font-semibold text-[#546E7A]">Grade</TableHead>
                 <TableHead className="font-semibold text-[#546E7A]">Date</TableHead>
-                <TableHead className="font-semibold text-[#546E7A]">Actions</TableHead>
+                {!readOnly && (
+                  <TableHead className="font-semibold text-[#546E7A]">Actions</TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
               {grades.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-[#78909C]">
+                  <TableCell colSpan={readOnly ? 7 : 8} className="text-center py-8 text-[#78909C]">
                     No grades found
                   </TableCell>
                 </TableRow>
@@ -81,26 +83,28 @@ export default function GradeTable({ grades, onEdit, onDelete, isLoading }) {
                     <TableCell className="text-[#78909C] text-sm">
                       {grade.graded_date ? format(new Date(grade.graded_date), 'MMM d, yyyy') : '-'}
                     </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onEdit(grade)}
-                          className="hover:bg-[#E0F2F1] hover:text-[#00796B]"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onDelete(grade.id)}
-                          className="hover:bg-[#FFEBEE] hover:text-[#D32F2F]"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                    {!readOnly && (
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onEdit(grade)}
+                            className="hover:bg-[#E0F2F1] hover:text-[#00796B]"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onDelete(grade.id)}
+                            className="hover:bg-[#FFEBEE] hover:text-[#D32F2F]"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
