@@ -63,7 +63,7 @@ export default function Calendar() {
         const res = await fetch('/api/events/demo-user');
         if (!res.ok) return [];
         return res.json();
-      } catch (err: any) {
+      } catch (err) {
         console.warn('Failed to fetch events:', err.message);
         return [];
       }
@@ -83,7 +83,7 @@ export default function Calendar() {
         const res = await fetch('/api/assignments/demo-user');
         if (!res.ok) return [];
         return res.json();
-      } catch (err: any) {
+      } catch (err) {
         console.warn('Failed to fetch assignments:', err.message);
         return [];
       }
@@ -115,9 +115,9 @@ export default function Calendar() {
   - assignment events whose dueDate matches "date"
   Returned as a single combined list of "events" for that day.
   */
-  const getEventsForDate = (date: Date) => {
+  const getEventsForDate = (date) => {
     // Grades from Base44 as events (due, submitted, graded)
-    const gradeEvents = grades.filter((grade: any) => {
+    const gradeEvents = grades.filter((grade) => {
       const dueDate = grade.due_date ? new Date(grade.due_date) : null;
       const submittedDate = grade.submitted_date ? new Date(grade.submitted_date) : null;
       const gradedDate = grade.graded_date ? new Date(grade.graded_date) : null;
@@ -130,13 +130,13 @@ export default function Calendar() {
     });
 
     // Regular calendar events (start/end)
-    const calendarEvents = events.filter((event: any) =>
+    const calendarEvents = events.filter((event) =>
       isSameDay(new Date(event.start), date) || 
       isSameDay(new Date(event.end), date)
     );
 
     // Assignments by dueDate
-    const assignmentEvents = assignments.filter((assignment: any) =>
+    const assignmentEvents = assignments.filter((assignment) =>
       isSameDay(new Date(assignment.dueDate), date)
     );
 
@@ -174,7 +174,7 @@ export default function Calendar() {
   Mark assignment as completed or undo completion via PATCH requests.
   Then refetch assignments to update UI.
   */
-  const markAssignmentDone = async (id: string) => {
+  const markAssignmentDone = async (id) => {
     try {
       await fetch(`/api/assignments/${id}/complete`, { method: 'PATCH' });
       await refetchAssignments();
@@ -183,7 +183,7 @@ export default function Calendar() {
     }
   };
 
-  const undoAssignmentDone = async (id: string) => {
+  const undoAssignmentDone = async (id) => {
     try {
       await fetch(`/api/assignments/${id}/uncomplete`, { method: 'PATCH' });
       await refetchAssignments();
@@ -430,7 +430,7 @@ export default function Calendar() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {selectedDateEvents.map((event: any) => {
+                  {selectedDateEvents.map((event) => {
                     /*
                     We distinguish between:
                     - Grade-based "events" (have assignment_name)
@@ -588,10 +588,32 @@ export default function Calendar() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4">
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-[#00796B]" />
                   <span className="text-sm text-[#546E7A]">Has Events</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded bg-[#0]()
+                  <div className="w-6 h-6 rounded-lg bg-[#00796B] text-white flex items-center justify-center text-xs font-bold">T</div>
+                  <span className="text-sm text-[#546E7A]">Today</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-[#E0F2F1] border border-[#00796B]" />
+                  <span className="text-sm text-[#546E7A]">Selected Day</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg border-l-4 border-[#FF9800] bg-white" />
+                  <span className="text-sm text-[#546E7A]">Assignment (Pending)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg border-l-4 border-[#4CAF50] bg-white" />
+                  <span className="text-sm text-[#546E7A]">Assignment (Done)</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}

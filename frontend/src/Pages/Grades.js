@@ -34,8 +34,8 @@ export default function Grades() {
 
   // TODO: replace with real queries for students and courses once your backend endpoints are ready
   // Right now these are placeholders so GradeDialog still receives props and renders correctly.
-  const students: any[] = []; // will eventually be populated from /api/students or Base44
-  const courses: any[] = [];  // will eventually be populated from /api/courses or Base44
+  const students = []; // will eventually be populated from /api/students or Base44
+  const courses = [];  // will eventually be populated from /api/courses or Base44
 
   /*
   =====================================================
@@ -75,7 +75,7 @@ export default function Grades() {
   - Adds current graded_date (YYYY-MM-DD)
   Returns final payload object to send to backend.
   */
-  const computeGradePayload = (data: any) => {
+  const computeGradePayload = (data) => {
     const percentage = (data.score / data.max_score) * 100;
 
     // Compute letter grade based on percentage
@@ -112,7 +112,7 @@ export default function Grades() {
   - Close dialog and clear selectedGrade
   */
   const createMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data) => {
       const payload = computeGradePayload(data);
       const res = await fetch("http://localhost:5050/api/grades", {
         method: "POST",
@@ -142,7 +142,7 @@ export default function Grades() {
   - Close dialog and clear selectedGrade
   */
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+    mutationFn: async ({ id, data }) => {
       const payload = computeGradePayload(data);
       const res = await fetch(`http://localhost:5050/api/grades/${id}`, {
         method: "PUT",
@@ -171,7 +171,7 @@ export default function Grades() {
   - Invalidate "grades" query so table refreshes.
   */
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (id) => {
       const res = await fetch(`http://localhost:5050/api/grades/${id}`, {
         method: "DELETE",
       });
@@ -195,7 +195,7 @@ export default function Grades() {
   - Selected course (filterCourse)
   - Selected assignment type (filterType)
   */
-  const filteredGrades = grades.filter((grade: any) => {
+  const filteredGrades = grades.filter((grade) => {
     // Match against searchTerm in composite string
     const matchesSearch = `${grade.student_name} ${grade.course_name} ${grade.assignment_name}`
       .toLowerCase()
@@ -220,7 +220,7 @@ export default function Grades() {
   - handleEdit: opens dialog with grade data
   - handleDelete: confirms and triggers delete mutation
   */
-  const handleSave = (data: any) => {
+  const handleSave = (data) => {
     if (selectedGrade) {
       // Editing an existing grade
       updateMutation.mutate({ id: selectedGrade.id, data });
@@ -230,12 +230,12 @@ export default function Grades() {
     }
   };
 
-  const handleEdit = (grade: any) => {
+  const handleEdit = (grade) => {
     setSelectedGrade(grade);
     setDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (id) => {
     if (window.confirm("Are you sure you want to delete this grade?")) {
       deleteMutation.mutate(id);
     }
@@ -257,7 +257,7 @@ export default function Grades() {
           {/* Show error message if fetching grades fails */}
           {gradesError && (
             <p className="text-sm text-red-600 mt-1">
-              {gradesError.message as string}
+              {String(gradesError.message)}
             </p>
           )}
         </div>
