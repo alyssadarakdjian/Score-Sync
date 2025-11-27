@@ -8,6 +8,8 @@ import eventRoutes from "./routes/events.js";
 import gradesRoutes from "./routes/grades.js";
 import adminCoursesRoutes from "./routes/adminCourses.js";
 import courseGradesRoutes from "./routes/courseGrades.js";
+import messageRoutes from "./routes/message.js";
+
 
 dotenv.config();
 
@@ -43,6 +45,7 @@ const MONGO_URI = process.env.MONGO_URI;
   app.use("/api/grades", gradesRoutes);
   app.use("/api/admin-courses", adminCoursesRoutes);
   app.use("/api/course-grades", courseGradesRoutes);
+  app.use("/api/messages", messageRoutes);
 
     // Bind to IPv4 to avoid localhost/IPv6 quirks
     app.listen(PORT, "0.0.0.0", () => {

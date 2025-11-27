@@ -80,6 +80,7 @@ function AppContent() {
           console.warn("⚠️ No fullname returned from backend:", data.user);
         }
         setFullname(data.user.fullname || "");
+        localStorage.setItem("user", JSON.stringify(data.user));
       }
 
       if (mode === "register") setMode("login");

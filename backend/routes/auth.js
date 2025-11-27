@@ -25,7 +25,7 @@ router.post("/register", async (req, res) => {
       fullname,
       studentId,
       dateOfBirth: dob,
-      role: 'student',
+      role: "student",
     });
     await newUser.save();
 
@@ -48,6 +48,7 @@ router.post("/login", async (req, res) => {
     res.json({
       message: "Login successful",
       user: {
+        _id: user._id,
         email: user.email,
         fullname: user.fullname,
         studentId: user.studentId,
@@ -61,32 +62,31 @@ router.post("/login", async (req, res) => {
 });
 
 // Admin login (explicit) - only succeeds if user has role 'admin'
-router.post('/admin-login', async (req, res) => {
+router.post("/admin-login", async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
-    // Debug logging (remove in production)
-    console.log('[ADMIN LOGIN] Attempt:', { email, providedPassword: password });
+    console.log("[ADMIN LOGIN] Attempt:", { email, providedPassword: password });
     if (!user) {
-      console.log('[ADMIN LOGIN] No user found for email');
-      return res.status(400).json({ message: 'Invalid admin credentials' });
+      console.log("[ADMIN LOGIN] No user found for email");
+      return res.status(400).json({ message: "Invalid admin credentials" });
     }
-    console.log('[ADMIN LOGIN] Found user:', { role: user.role, storedPassword: user.password });
     if (user.password !== password) {
-      console.log('[ADMIN LOGIN] Password mismatch');
-      return res.status(400).json({ message: 'Invalid admin credentials' });
+      console.log("[ADMIN LOGIN] Password mismatch");
+      return res.status(400).json({ message: "Invalid admin credentials" });
     }
-    if (user.role !== 'admin') {
-      console.log('[ADMIN LOGIN] Role not admin:', user.role);
-      return res.status(400).json({ message: 'Invalid admin credentials' });
+    if (user.role !== "admin") {
+      console.log("[ADMIN LOGIN] Role not admin:", user.role);
+      return res.status(400).json({ message: "Invalid admin credentials" });
     }
     res.json({
-      message: 'Admin login successful',
+      message: "Admin login successful",
       user: {
+        _id: user._id,
         email: user.email,
         fullname: user.fullname,
         role: user.role,
-      }
+      },
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -111,10 +111,20 @@ router.get("/user", async (req, res) => {
 // Get all students (for admin to add to courses)
 router.get("/students", async (req, res) => {
   try {
-    const students = await User.find({ role: 'student' })
-      .select('fullname email studentId _id')
+    const students = await User.find({ role: "student" })
+      .select("fullname email studentId _id")
       .sort({ fullname: 1 });
     res.json({ students });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Get all users (for messaging dropdown)
+router.get("/users", async (req, res) => {
+  try {
+    const users = await User.find().select("fullname email _id role");
+    res.json(users);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

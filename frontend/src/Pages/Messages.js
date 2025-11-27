@@ -1,13 +1,12 @@
-import React, { useState } from "react";
-import { base44 } from "../api/base44Client";
-import { useQuery } from "@tanstack/react-query";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "../Components/ui/card";
 import { Button } from "../Components/ui/button";
 import { Input } from "../Components/ui/input";
 import { Textarea } from "../Components/ui/textarea";
 import { Badge } from "../Components/ui/badge";
-import { Avatar } from "../Components/ui/avatar";
-import { Send, Search, Plus, Users, User, Mail } from "lucide-react";
+import { Send, Search, Plus, Users, Mail } from "lucide-react";
 import { format } from "date-fns";
 import {
   Dialog,
@@ -27,100 +26,108 @@ export default function Messages() {
   const [composeTo, setComposeTo] = useState("");
   const [composeSubject, setComposeSubject] = useState("");
   const [composeMessage, setComposeMessage] = useState("");
+  const [messages, setMessages] = useState([]);
 
-  const { data: students = [] } = useQuery({
-    queryKey: ['students'],
-    queryFn: () => base44.entities.Student.list(),
+  const queryClient = useQueryClient();
+  const API_BASE = process.env.REACT_APP_API_URL;
+  const user = JSON.parse(localStorage.getItem("user")); // current logged-in user
+
+  // Fetch all conversations for current user
+  const { data: conversations = [], isLoading: conversationsLoading } = useQuery({
+    queryKey: ["conversations", user._id],
+    queryFn: async () => {
+      const res = await axios.get(`${API_BASE}/api/messages/conversations/${user._id}`);
+      return res.data;
+    },
   });
 
-  const { data: user } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-  });
-
-  // Mock conversations data (in a real app, this would come from a Messages entity)
-  const conversations = [
-    {
-      id: 1,
-      participant: "John Smith",
-      participantEmail: "john.smith@example.com",
-      lastMessage: "Thank you for the feedback on my essay!",
-      timestamp: new Date(2024, 0, 20, 14, 30),
-      unread: 2,
-      avatar: "JS"
-    },
-    {
-      id: 2,
-      participant: "Sarah Johnson",
-      participantEmail: "sarah.j@example.com",
-      lastMessage: "When is the next assignment due?",
-      timestamp: new Date(2024, 0, 19, 10, 15),
-      unread: 0,
-      avatar: "SJ"
-    },
-    {
-      id: 3,
-      participant: "Mike Williams",
-      participantEmail: "mike.w@example.com",
-      lastMessage: "I have a question about the midterm exam",
-      timestamp: new Date(2024, 0, 18, 16, 45),
-      unread: 1,
-      avatar: "MW"
-    },
-  ];
-
-  const messages = selectedConversation ? [
-    {
-      id: 1,
-      sender: selectedConversation.participant,
-      content: "Hello! I wanted to discuss my recent grade.",
-      timestamp: new Date(2024, 0, 20, 14, 0),
-      isOwn: false
-    },
-    {
-      id: 2,
-      sender: user?.full_name || "You",
-      content: "Of course! What would you like to know?",
-      timestamp: new Date(2024, 0, 20, 14, 15),
-      isOwn: true
-    },
-    {
-      id: 3,
-      sender: selectedConversation.participant,
-      content: selectedConversation.lastMessage,
-      timestamp: selectedConversation.timestamp,
-      isOwn: false
-    },
-  ] : [];
-
-  const filteredConversations = conversations.filter(conv =>
-    conv.participant.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    conv.participantEmail.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleSendMessage = () => {
-    if (newMessage.trim()) {
-      // In a real app, this would create a new message in the database
-      console.log("Sending message:", newMessage);
-      setNewMessage("");
+  // Fetch messages between current user and selected conversation participant
+  useEffect(() => {
+    if (!selectedConversation) {
+      setMessages([]);
+      return;
     }
+    const fetchMessages = async () => {
+      if (!selectedConversation) return;
+      const res = await axios.get(
+        `${API_BASE}/api/messages/${user._id}/${selectedConversation._id}`
+      );
+      setMessages(res.data);
+    };
+    fetchMessages();
+  }, [selectedConversation, API_BASE, user._id]);
+
+  // Fetch all users for composing
+  const { data: users = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
+      const res = await axios.get(`${API_BASE}/api/auth/users`);
+      return res.data;
+    },
+  });
+
+  // Send message mutation
+  const sendMessageMutation = useMutation({
+    mutationFn: async (data) => {
+      const res = await axios.post(`${API_BASE}/api/messages`, data);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["conversations", user._id] });
+      if (selectedConversation) {
+        // Refetch messages for the selected conversation
+        axios
+          .get(`${API_BASE}/api/messages/${user._id}/${selectedConversation._id}`)
+          .then((res) => setMessages(res.data));
+      }
+      setNewMessage("");
+      setComposeOpen(false);
+      setComposeTo("");
+      setComposeSubject("");
+      setComposeMessage("");
+    },
+  });
+
+  const filteredConversations = (conversations || []).filter((conv) => {
+    const name = conv.fullname ? conv.fullname.toLowerCase() : "";
+    const email = conv.email ? conv.email.toLowerCase() : "";
+    return (
+      name.includes(searchTerm.toLowerCase()) ||
+      email.includes(searchTerm.toLowerCase())
+    );
+  });
+
+  // Send a reply inside a thread
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !selectedConversation) return;
+    await sendMessageMutation.mutateAsync({
+      senderId: user._id,
+      recipientId: selectedConversation._id,
+      subject: "Re: " + (selectedConversation.lastMessage || "Message"),
+      content: newMessage,
+    });
   };
 
-  const handleCompose = () => {
-    // In a real app, this would send the message via email or save to database
-    console.log("Composing message to:", composeTo, composeSubject, composeMessage);
-    setComposeOpen(false);
-    setComposeTo("");
-    setComposeSubject("");
-    setComposeMessage("");
+  // Compose a new message
+  const handleCompose = async () => {
+    if (!composeTo || !composeSubject || !composeMessage) return;
+    await sendMessageMutation.mutateAsync({
+      senderId: user._id,
+      recipientId: composeTo,
+      subject: composeSubject,
+      content: composeMessage,
+    });
   };
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-[#1A4D5E]">Messages</h2>
-          <p className="text-[#78909C] mt-1">Communicate with students and parents</p>
+          <p className="text-[#78909C] mt-1">
+            Communicate with teachers, students, or admins
+          </p>
         </div>
         <Button
           onClick={() => setComposeOpen(true)}
@@ -156,24 +163,42 @@ export default function Messages() {
               <div className="divide-y divide-gray-100">
                 {filteredConversations.map((conv) => (
                   <button
-                    key={conv.id}
-                    onClick={() => setSelectedConversation(conv)}
+                    key={conv._id}
+                    onClick={() =>
+                      setSelectedConversation({
+                        _id: conv._id,
+                        fullname: conv.fullname,
+                        email: conv.email,
+                        lastMessage: conv.lastMessage || "",
+                        timestamp: conv.timestamp || null,
+                        unread: conv.unread || 0,
+                        avatar: conv.fullname
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase(),
+                      })
+                    }
                     className={`w-full text-left p-4 transition-colors duration-200 ${
-                      selectedConversation?.id === conv.id
-                        ? 'bg-[#E0F2F1]'
-                        : 'hover:bg-[#F5F5F5]'
+                      selectedConversation?._id === conv._id
+                        ? "bg-[#E0F2F1]"
+                        : "hover:bg-[#F5F5F5]"
                     }`}
                   >
                     <div className="flex items-start gap-3">
                       <div className="w-10 h-10 bg-gradient-to-br from-[#00796B] to-[#004D40] rounded-full flex items-center justify-center flex-shrink-0">
                         <span className="text-white font-semibold text-sm">
-                          {conv.avatar}
+                          {conv.fullname
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .toUpperCase()}
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
                           <h4 className="font-semibold text-[#37474F] truncate">
-                            {conv.participant}
+                            {conv.fullname}
                           </h4>
                           {conv.unread > 0 && (
                             <Badge className="bg-[#00796B] text-white text-xs">
@@ -182,13 +207,31 @@ export default function Messages() {
                           )}
                         </div>
                         <p className="text-sm text-[#78909C] truncate mb-1">
-                          {conv.lastMessage}
+                          {conv.lastMessage || ""}
                         </p>
                         <p className="text-xs text-[#B0BEC5]">
-                          {format(conv.timestamp, 'MMM d, h:mm a')}
+                          {conv.timestamp
+                            ? format(new Date(conv.timestamp), "MMM d, h:mm a")
+                            : ""}
                         </p>
                       </div>
                     </div>
+                    {/* Delete Conversation Button (only for selected conversation) */}
+                    {selectedConversation?._id === conv._id && (
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (window.confirm("Delete this conversation?")) {
+                            await axios.delete(`${API_BASE}/api/messages/conversation/${user._id}/${conv._id}`);
+                            queryClient.invalidateQueries(["conversations", user._id]);
+                            setSelectedConversation(null);
+                          }
+                        }}
+                        className="text-red-500 text-xs mt-2 hover:underline"
+                      >
+                        Delete Conversation
+                      </button>
+                    )}
                   </button>
                 ))}
               </div>
@@ -209,28 +252,40 @@ export default function Messages() {
                   </div>
                   <div>
                     <CardTitle className="text-lg font-bold text-[#1A4D5E]">
-                      {selectedConversation.participant}
+                      {selectedConversation.fullname}
                     </CardTitle>
-                    <p className="text-xs text-[#78909C]">{selectedConversation.participantEmail}</p>
+                    <p className="text-xs text-[#78909C]">
+                      {selectedConversation.email}
+                    </p>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
                 {messages.map((message) => (
                   <div
-                    key={message.id}
-                    className={`flex ${message.isOwn ? 'justify-end' : 'justify-start'}`}
+                    key={message._id}
+                    className={`flex ${
+                      message.senderId?._id?.toString() === user._id.toString()
+                        ? "justify-end"
+                        : "justify-start"
+                    } items-start gap-2`}
                   >
                     <div
                       className={`max-w-[70%] rounded-lg p-3 ${
-                        message.isOwn
-                          ? 'bg-[#00796B] text-white'
-                          : 'bg-[#F5F5F5] text-[#37474F]'
+                        message.senderId?._id?.toString() === user._id.toString()
+                          ? "bg-[#00796B] text-white"
+                          : "bg-[#F5F5F5] text-[#37474F]"
                       }`}
                     >
                       <p className="text-sm mb-1">{message.content}</p>
-                      <p className={`text-xs ${message.isOwn ? 'text-white/70' : 'text-[#78909C]'}`}>
-                        {format(message.timestamp, 'h:mm a')}
+                      <p
+                        className={`text-xs ${
+                          message.senderId?._id?.toString() === user._id.toString()
+                            ? "text-white/70"
+                            : "text-[#78909C]"
+                        }`}
+                      >
+                        {format(new Date(message.createdAt), "h:mm a")}
                       </p>
                     </div>
                   </div>
@@ -243,12 +298,15 @@ export default function Messages() {
                     placeholder="Type your message..."
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                    onKeyPress={(e) =>
+                      e.key === "Enter" && handleSendMessage()
+                    }
                     className="flex-1 border-2 focus:border-[#00796B]"
                   />
                   <Button
                     onClick={handleSendMessage}
                     className="bg-[#00796B] hover:bg-[#00695C]"
+                    disabled={sendMessageMutation.isPending}
                   >
                     <Send className="w-4 h-4" />
                   </Button>
@@ -287,11 +345,13 @@ export default function Messages() {
                   <SelectValue placeholder="Select recipient" />
                 </SelectTrigger>
                 <SelectContent>
-                  {students.filter(s => s.status === 'active').map(student => (
-                    <SelectItem key={student.id} value={student.email}>
-                      {student.first_name} {student.last_name} ({student.email})
-                    </SelectItem>
-                  ))}
+                  {users
+                    .filter((u) => u._id !== user._id)
+                    .map((u) => (
+                      <SelectItem key={u._id} value={u._id}>
+                        {u.fullname} ({u.email})
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -318,16 +378,15 @@ export default function Messages() {
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setComposeOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setComposeOpen(false)}>
               Cancel
             </Button>
             <Button
               onClick={handleCompose}
               className="bg-[#00796B] hover:bg-[#00695C]"
-              disabled={!composeTo || !composeSubject || !composeMessage}
+              disabled={
+                !composeTo || !composeSubject || !composeMessage || sendMessageMutation.isPending
+              }
             >
               <Send className="w-4 h-4 mr-2" />
               Send Message

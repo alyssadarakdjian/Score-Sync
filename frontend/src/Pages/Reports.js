@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { base44 } from "../api/base44Client";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "../Components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../Components/ui/select";
@@ -14,43 +14,62 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
-  PieChart,
-  Pie,
-  Cell,
 } from "recharts";
-import { TrendingUp, Users, Award } from "lucide-react";
+import { TrendingUp, Award } from "lucide-react";
 
 const COLORS = ['#00796B', '#0097A7', '#00ACC1', '#00BCD4', '#26C6DA', '#4DD0E1'];
 
 export default function Reports() {
   const [selectedCourse, setSelectedCourse] = useState("all");
+  const [user, setUser] = useState(null);
+  const [grades, setGrades] = useState([]);
+  const [courses, setCourses] = useState([]);
 
-  const { data: students = [] } = useQuery({
-    queryKey: ['students'],
-    queryFn: () => base44.entities.Student.list(),
-  });
+  const userEmail = localStorage.getItem("scoreSyncEmail");
 
-  const { data: courses = [] } = useQuery({
-    queryKey: ['courses'],
-    queryFn: () => base44.entities.Course.list(),
-  });
+  useEffect(() => {
+    if (!userEmail) return;
 
-  const { data: grades = [] } = useQuery({
-    queryKey: ['grades'],
-    queryFn: () => base44.entities.Grade.list(),
-  });
+    const fetchUserAndData = async () => {
+      try {
+        const { data: userData } = await axios.get(`/api/auth/user?email=${userEmail}`);
+        setUser(userData.user);
 
-  const filteredGrades = selectedCourse === "all" 
-    ? grades 
-    : grades.filter(g => g.course_id === selectedCourse);
+        const { data: coursesData } = await axios.get("/api/admin-courses", {
+          headers: { "X-User-Email": userEmail },
+        });
+        setCourses(coursesData?.courses || []);
+
+        const { data: gradesData } = await axios.get(`/api/course-grades/student/${userData.user._id}`);
+        setGrades(gradesData?.grades || gradesData || []);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    fetchUserAndData();
+  }, [userEmail]);
+
+  const filteredGrades = selectedCourse === "all"
+    ? grades
+    : grades.filter(g => {
+        const courseObj = g.courseId || g.course_id;
+        return (
+          courseObj?._id === selectedCourse ||
+          courseObj?.id === selectedCourse ||
+          courseObj?.course_name === selectedCourse ||
+          courseObj?.course_code === selectedCourse
+        );
+      });
+  console.log("Filtered Grades:", filteredGrades);
 
   // Grade distribution data
   const gradeDistribution = [
-    { grade: 'A (90-100)', count: filteredGrades.filter(g => g.percentage >= 90).length },
-    { grade: 'B (80-89)', count: filteredGrades.filter(g => g.percentage >= 80 && g.percentage < 90).length },
-    { grade: 'C (70-79)', count: filteredGrades.filter(g => g.percentage >= 70 && g.percentage < 80).length },
-    { grade: 'D (60-69)', count: filteredGrades.filter(g => g.percentage >= 60 && g.percentage < 70).length },
-    { grade: 'F (0-59)', count: filteredGrades.filter(g => g.percentage < 60).length },
+    { grade: 'A (90-100)', count: filteredGrades.filter(g => g.overallGrade >= 90).length },
+    { grade: 'B (80-89)', count: filteredGrades.filter(g => g.overallGrade >= 80 && g.overallGrade < 90).length },
+    { grade: 'C (70-79)', count: filteredGrades.filter(g => g.overallGrade >= 70 && g.overallGrade < 80).length },
+    { grade: 'D (60-69)', count: filteredGrades.filter(g => g.overallGrade >= 60 && g.overallGrade < 70).length },
+    { grade: 'F (0-59)', count: filteredGrades.filter(g => g.overallGrade < 60).length },
   ];
 
   // Assignment type performance
@@ -59,7 +78,7 @@ export default function Reports() {
     if (!assignmentTypeData[grade.assignment_type]) {
       assignmentTypeData[grade.assignment_type] = { total: 0, count: 0 };
     }
-    assignmentTypeData[grade.assignment_type].total += grade.percentage || 0;
+    assignmentTypeData[grade.assignment_type].total += grade.overallGrade || 0;
     assignmentTypeData[grade.assignment_type].count += 1;
   });
 
@@ -70,21 +89,27 @@ export default function Reports() {
 
   // Course performance comparison
   const coursePerformance = courses.map(course => {
-    const courseGrades = grades.filter(g => g.course_id === course.id);
+    const courseGrades = grades.filter(g => {
+      const courseObj = g.courseId || g.course_id;
+      return courseObj?._id === course._id || courseObj?.id === course._id;
+    });
+    
     const average = courseGrades.length > 0
-      ? courseGrades.reduce((sum, g) => sum + (g.percentage || 0), 0) / courseGrades.length
+      ? courseGrades.reduce((sum, g) => sum + (g.overallGrade || 0), 0) / courseGrades.length
       : 0;
+    
     return {
-      name: course.course_code,
+      name: course.course_code || course.course_name,
       average: average.toFixed(1),
       students: courseGrades.length
     };
   }).filter(c => c.students > 0);
 
-  const activeStudents = students.filter(s => s.status === 'active').length;
   const averageGrade = filteredGrades.length > 0
-    ? (filteredGrades.reduce((sum, g) => sum + (g.percentage || 0), 0) / filteredGrades.length).toFixed(1)
+    ? (filteredGrades.reduce((sum, g) => sum + (g.overallGrade || 0), 0) / filteredGrades.length).toFixed(1)
     : 0;
+
+  const totalGrades = filteredGrades.reduce((sum, record) => sum + (record.gradeItems?.length || 0), 0);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -99,8 +124,8 @@ export default function Reports() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Courses</SelectItem>
-            {courses.map(course => (
-              <SelectItem key={course.id} value={course.id}>
+            {Array.isArray(courses) && courses.map(course => (
+              <SelectItem key={course._id} value={course._id}>
                 {course.course_name}
               </SelectItem>
             ))}
@@ -108,22 +133,8 @@ export default function Reports() {
         </Select>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
-        <Card className="shadow-lg border-0 bg-white">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Users className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-[#78909C]">Active Students</p>
-                <p className="text-2xl font-bold text-[#1A4D5E]">{activeStudents}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="shadow-lg border-0 bg-white">
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card className="shadow-lg border-0 bg-white w-full">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -137,7 +148,7 @@ export default function Reports() {
           </CardContent>
         </Card>
         
-        <Card className="shadow-lg border-0 bg-white">
+        <Card className="shadow-lg border-0 bg-white w-full">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -145,14 +156,14 @@ export default function Reports() {
               </div>
               <div>
                 <p className="text-sm text-[#78909C]">Total Grades</p>
-                <p className="text-2xl font-bold text-[#1A4D5E]">{filteredGrades.length}</p>
+                <p className="text-2xl font-bold text-[#1A4D5E]">{totalGrades}</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className={`grid gap-6 ${selectedCourse === "all" ? "lg:grid-cols-2" : "grid-cols-1"}`}>
         <Card className="shadow-lg border-0 bg-white">
           <CardHeader>
             <CardTitle className="text-xl font-bold text-[#1A4D5E]">Grade Distribution</CardTitle>
@@ -188,30 +199,32 @@ export default function Reports() {
         </Card>
       </div>
 
-      <Card className="shadow-lg border-0 bg-white">
-        <CardHeader>
-          <CardTitle className="text-xl font-bold text-[#1A4D5E]">Course Performance Comparison</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={coursePerformance}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
-              <XAxis dataKey="name" stroke="#78909C" />
-              <YAxis stroke="#78909C" domain={[0, 100]} />
-              <Tooltip />
-              <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="average" 
-                stroke="#00796B" 
-                strokeWidth={3}
-                dot={{ fill: '#00796B', r: 6 }}
-                activeDot={{ r: 8 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      {selectedCourse === "all" && (
+        <Card className="shadow-lg border-0 bg-white">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold text-[#1A4D5E]">Course Performance Comparison</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={coursePerformance}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
+                <XAxis dataKey="name" stroke="#78909C" />
+                <YAxis stroke="#78909C" domain={[0, 100]} />
+                <Tooltip />
+                <Legend />
+                <Line 
+                  type="monotone" 
+                  dataKey="average" 
+                  stroke="#00796B" 
+                  strokeWidth={3}
+                  dot={{ fill: '#00796B', r: 6 }}
+                  activeDot={{ r: 8 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
