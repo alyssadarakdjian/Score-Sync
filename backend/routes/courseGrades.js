@@ -19,6 +19,20 @@ async function requireAdmin(req, res, next) {
   }
 }
 
+// GET all course grades (admin only)
+router.get('/', requireAdmin, async (req, res) => {
+  try {
+    const grades = await CourseGrade.find({})
+      .populate('studentId', 'fullname email studentId')
+      .populate('courseId', 'course_name course_code');
+    
+    res.json({ grades });
+  } catch (err) {
+    console.error('Error fetching all grades:', err);
+    res.status(500).json({ message: 'Failed to fetch grades' });
+  }
+});
+
 // GET grades for a specific course and student
 router.get('/course/:courseId/student/:studentId', async (req, res) => {
   try {

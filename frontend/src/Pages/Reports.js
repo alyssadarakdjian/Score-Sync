@@ -26,6 +26,7 @@ export default function Reports() {
   const [courses, setCourses] = useState([]);
 
   const userEmail = localStorage.getItem("scoreSyncEmail");
+  const userRole = localStorage.getItem("scoreSyncRole");
 
   useEffect(() => {
     if (!userEmail) return;
@@ -40,8 +41,17 @@ export default function Reports() {
         });
         setCourses(coursesData?.courses || []);
 
-        const { data: gradesData } = await axios.get(`/api/course-grades/student/${userData.user._id}`);
-        setGrades(gradesData?.grades || gradesData || []);
+        if (userData.user.role === 'admin') {
+          // Fetch all grades for admin view
+          const { data: allGradesData } = await axios.get('/api/course-grades', {
+            headers: { "X-User-Email": userEmail }
+          });
+          setGrades(allGradesData?.grades || allGradesData || []);
+        } else {
+          // Fetch student-specific grades
+          const { data: gradesData } = await axios.get(`/api/course-grades/student/${userData.user._id}`);
+          setGrades(gradesData?.grades || gradesData || []);
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -97,6 +107,24 @@ export default function Reports() {
   // Sort by grade order
   const gradeOrder = ['A (90-100)', 'B (80-89)', 'C (70-79)', 'D (60-69)', 'F (0-59)'];
   assignmentDistribution.sort((a, b) => gradeOrder.indexOf(a.grade) - gradeOrder.indexOf(b.grade));
+
+  // Calculate average grades per class (for admin view)
+  const classAverages = courses.map(course => {
+    const courseGrades = grades.filter(g => {
+      const courseObj = g.courseId || g.course_id;
+      return courseObj?._id === course._id || courseObj?.id === course._id;
+    });
+    
+    const average = courseGrades.length > 0
+      ? courseGrades.reduce((sum, g) => sum + (g.overallGrade || 0), 0) / courseGrades.length
+      : 0;
+    
+    return {
+      name: course.course_code || course.course_name,
+      average: parseFloat(average.toFixed(1)),
+      students: courseGrades.length
+    };
+  }).filter(c => c.students > 0);
 
   // Assignment type performance
   const assignmentTypeData = {};
@@ -189,41 +217,80 @@ export default function Reports() {
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="shadow-lg border-0 bg-white">
-          <CardHeader>
-            <CardTitle className="text-xl font-bold text-[#1A4D5E]">Course Grade Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={gradeDistribution}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
-                <XAxis dataKey="grade" stroke="#78909C" />
-                <YAxis stroke="#78909C" />
-                <Tooltip />
-                <Bar dataKey="count" fill="#00796B" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      {userRole === 'admin' ? (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="shadow-lg border-0 bg-white">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-[#1A4D5E]">Course Grade Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={gradeDistribution}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
+                  <XAxis dataKey="grade" stroke="#78909C" />
+                  <YAxis stroke="#78909C" />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#00796B" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
 
-        <Card className="shadow-lg border-0 bg-white">
-          <CardHeader>
-            <CardTitle className="text-xl font-bold text-[#1A4D5E]">Assignment Grade Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={assignmentDistribution}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
-                <XAxis dataKey="grade" stroke="#78909C" />
-                <YAxis stroke="#78909C" />
-                <Tooltip />
-                <Bar dataKey="count" fill="#0097A7" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+          <Card className="shadow-lg border-0 bg-white">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-[#1A4D5E]">Average Grades by Class</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={classAverages}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
+                  <XAxis dataKey="name" stroke="#78909C" />
+                  <YAxis stroke="#78909C" domain={[0, 100]} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="average" fill="#0097A7" radius={[8, 8, 0, 0]} name="Average Grade (%)" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="shadow-lg border-0 bg-white">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-[#1A4D5E]">Course Grade Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={gradeDistribution}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
+                  <XAxis dataKey="grade" stroke="#78909C" />
+                  <YAxis stroke="#78909C" />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#00796B" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg border-0 bg-white">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-[#1A4D5E]">Assignment Grade Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={assignmentDistribution}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
+                  <XAxis dataKey="grade" stroke="#78909C" />
+                  <YAxis stroke="#78909C" />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#0097A7" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
