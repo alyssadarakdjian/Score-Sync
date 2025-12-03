@@ -1,26 +1,25 @@
-import React from "react";
-import { Link, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard,
-  BookOpen,
-  GraduationCap,
   BarChart3,
+  BookOpen,
   Calendar as CalendarIcon,
-  MessageSquare,
+  GraduationCap,
+  LayoutDashboard,
   LogOut,
   Menu,
+  MessageSquare,
 } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
   SidebarProvider,
   SidebarTrigger,
 } from "./ui/sidebar";
@@ -64,11 +63,10 @@ export default function Layout({ children, currentPageName, fullname, email, onL
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton
                         asChild
-                        className={`hover:bg-[#E0F2F1] hover:text-[#00796B] transition-all duration-200 rounded-lg mb-1 ${
-                          location.pathname === item.url
+                        className={`hover:bg-[#E0F2F1] hover:text-[#00796B] transition-all duration-200 rounded-lg mb-1 ${location.pathname === item.url
                             ? "bg-[#E0F2F1] text-[#00796B] shadow-sm"
                             : "text-[#546E7A]"
-                        }`}
+                          }`}
                       >
                         <Link to={item.url} className="flex items-center gap-3 px-3 py-2.5">
                           <item.icon className="w-5 h-5" />

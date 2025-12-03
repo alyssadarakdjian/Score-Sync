@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
 import axios from "axios";
-import StatsCard from "../Components/dashboard/StatsCard";
-import RecentGrades from "../Components/dashboard/RecentGrades";
+import { BookOpen, Calendar, GraduationCap, TrendingUp } from "lucide-react";
+import { useEffect, useState } from "react";
 import CourseOverview from "../Components/dashboard/CourseOverview";
-import { BookOpen, GraduationCap, TrendingUp, Calendar } from "lucide-react";
+import RecentGrades from "../Components/dashboard/RecentGrades";
+import StatsCard from "../Components/dashboard/StatsCard";
 
 export default function Dashboard() {
   const [students, setStudents] = useState([]);
@@ -37,7 +37,7 @@ export default function Dashboard() {
         setGrades(gradesRes.data?.grades || []);
         setStudents([]);
         
-        // Fetch assignments for the user
+        // Fetch assignments for the user and throw error if dashboard does not fetch
         try {
           const assignmentsRes = await axios.get(`/api/assignments/${userId}`);
           console.log('Dashboard - Assignments:', assignmentsRes.data);
