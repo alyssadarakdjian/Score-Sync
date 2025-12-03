@@ -72,6 +72,32 @@ export default function Reports() {
     { grade: 'F (0-59)', count: filteredGrades.filter(g => g.overallGrade < 60).length },
   ];
 
+  // Assignment distribution - individual assignment grades
+  const assignmentDistribution = [];
+  filteredGrades.forEach(gradeRecord => {
+    if (gradeRecord.gradeItems && gradeRecord.gradeItems.length > 0) {
+      gradeRecord.gradeItems.forEach(item => {
+        const percentage = (item.grade / item.maxGrade) * 100;
+        let category = 'F (0-59)';
+        if (percentage >= 90) category = 'A (90-100)';
+        else if (percentage >= 80) category = 'B (80-89)';
+        else if (percentage >= 70) category = 'C (70-79)';
+        else if (percentage >= 60) category = 'D (60-69)';
+        
+        const existing = assignmentDistribution.find(d => d.grade === category);
+        if (existing) {
+          existing.count += 1;
+        } else {
+          assignmentDistribution.push({ grade: category, count: 1 });
+        }
+      });
+    }
+  });
+
+  // Sort by grade order
+  const gradeOrder = ['A (90-100)', 'B (80-89)', 'C (70-79)', 'D (60-69)', 'F (0-59)'];
+  assignmentDistribution.sort((a, b) => gradeOrder.indexOf(a.grade) - gradeOrder.indexOf(b.grade));
+
   // Assignment type performance
   const assignmentTypeData = {};
   filteredGrades.forEach(grade => {
@@ -163,10 +189,10 @@ export default function Reports() {
         </Card>
       </div>
 
-      <div className={`grid gap-6 ${selectedCourse === "all" ? "lg:grid-cols-2" : "grid-cols-1"}`}>
+      <div className="grid gap-6 lg:grid-cols-2">
         <Card className="shadow-lg border-0 bg-white">
           <CardHeader>
-            <CardTitle className="text-xl font-bold text-[#1A4D5E]">Grade Distribution</CardTitle>
+            <CardTitle className="text-xl font-bold text-[#1A4D5E]">Course Grade Distribution</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -183,48 +209,21 @@ export default function Reports() {
 
         <Card className="shadow-lg border-0 bg-white">
           <CardHeader>
-            <CardTitle className="text-xl font-bold text-[#1A4D5E]">Performance by Assignment Type</CardTitle>
+            <CardTitle className="text-xl font-bold text-[#1A4D5E]">Assignment Grade Distribution</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={assignmentPerformance}>
+              <BarChart data={assignmentDistribution}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
-                <XAxis dataKey="type" stroke="#78909C" angle={-45} textAnchor="end" height={80} />
-                <YAxis stroke="#78909C" domain={[0, 100]} />
+                <XAxis dataKey="grade" stroke="#78909C" />
+                <YAxis stroke="#78909C" />
                 <Tooltip />
-                <Bar dataKey="average" fill="#0097A7" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="count" fill="#0097A7" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
-
-      {selectedCourse === "all" && (
-        <Card className="shadow-lg border-0 bg-white">
-          <CardHeader>
-            <CardTitle className="text-xl font-bold text-[#1A4D5E]">Course Performance Comparison</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={coursePerformance}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
-                <XAxis dataKey="name" stroke="#78909C" />
-                <YAxis stroke="#78909C" domain={[0, 100]} />
-                <Tooltip />
-                <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="average" 
-                  stroke="#00796B" 
-                  strokeWidth={3}
-                  dot={{ fill: '#00796B', r: 6 }}
-                  activeDot={{ r: 8 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
