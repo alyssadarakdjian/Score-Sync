@@ -1,6 +1,17 @@
+## Project Overview
+This project is part of an academic assignment and demonstrates a React-based application structure. 
+The main focus is on learning component-based design, routing, and state management using modern React tools.
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+
+## Technologies Used
+- React  
+- React Router  
+- React Query  
+- TailwindCSS  
+- Node.js (API)  
 
 ## Available Scripts
 
@@ -68,3 +79,64 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+## Folder Structure
+Below is an overview of the project’s folder structure to help developers understand how both the backend and frontend are organized.
+
+SCORE-SYNC/
+├── backend/
+│   ├── models/
+│   │   ├── User.js                # Schema for user authentication
+│   │   └── Teacher.js             # Schema for teachers
+│   ├── routes/
+│   │   └── auth.js                # Login/register route handlers
+│   ├── server.js                  # Express + MongoDB backend server
+│   ├── .env                       # Environment variables (Mongo URI, Port)
+│   ├── package.json               # Backend dependencies and scripts
+│   └── package-lock.json          # Backend lockfile
+│
+└─ frontend/
+    ├── public/                    # Static public assets
+    │   └── index.html
+    │
+    ├── src/
+    │   ├── api/
+    │   │   └── base44Client.js    # Axios API handler
+    │   │
+    │   ├── Components/
+    │   │   ├── courses/
+    │   │   ├── dashboard/
+    │   │   ├── grades/
+    │   │   ├── students/
+    │   │   └── ui/                # Core reusable UI components
+    │   │
+    │   ├── Pages/                 # Main routed pages
+    │   │   ├── Calendar.js
+    │   │   ├── Courses.js
+    │   │   ├── Dashboard.js
+    │   │   ├── Grades.js
+    │   │   ├── Messages.js
+    │   │   ├── Reports.js
+    │   │   └── Students.js
+    │   │
+    │   ├── App.js                 # Root React component + router
+    │   ├── Home.js                # Landing/login redirect
+    │   ├── AdminLogin.js          # Admin login page
+    │   ├── utils.js               # Helper functions
+    │   ├── App.css                # Global styling
+    │   ├── index.js               # ReactDOM entry point
+    │   ├── index.css              # Tailwind base imports
+    │   ├── reportWebVitals.js     # Performance metrics
+    │   └── setupTests.js          # Jest test setup
+    │
+    ├── package.json               # Frontend dependencies
+    └── package-lock.json          # Frontend lockfile
+    
+### Notes
+- Backend manages authentication and database operations.
+- Frontend is built with React Router, React Query, and custom UI elements.
+- Each folder represents a self-contained feature area for maintainability.
+
+
+    
+
