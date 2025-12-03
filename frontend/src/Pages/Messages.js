@@ -30,15 +30,39 @@ export default function Messages() {
 
   const queryClient = useQueryClient();
   const API_BASE = process.env.REACT_APP_API_URL;
-  const user = JSON.parse(localStorage.getItem("user")); // current logged-in user
+  const cachedUser = JSON.parse(localStorage.getItem("user"));
+  const cachedEmail = localStorage.getItem("scoreSyncEmail");
+  const [user, setUser] = useState(cachedUser || null);
+
+  // Resolve user from email if not present in localStorage
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (user || !cachedEmail) return;
+      try {
+        const res = await axios.get(`/api/auth/user?email=${encodeURIComponent(cachedEmail)}`);
+        if (res.data && res.data.user) {
+          setUser(res.data.user);
+          // cache for future
+          localStorage.setItem("user", JSON.stringify(res.data.user));
+        }
+      } catch (err) {
+        console.warn("Failed to resolve user from email", err.message);
+      }
+    };
+    fetchUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cachedEmail]);
 
   // Fetch all conversations for current user
+  const userId = user?._id;
   const { data: conversations = [], isLoading: conversationsLoading } = useQuery({
-    queryKey: ["conversations", user._id],
+    queryKey: ["conversations", userId || "unknown"],
     queryFn: async () => {
-      const res = await axios.get(`${API_BASE}/api/messages/conversations/${user._id}`);
+      if (!userId) return [];
+      const res = await axios.get(`${API_BASE}/api/messages/conversations/${userId}`);
       return res.data;
     },
+    enabled: !!userId,
   });
 
   // Fetch messages between current user and selected conversation participant
@@ -48,14 +72,14 @@ export default function Messages() {
       return;
     }
     const fetchMessages = async () => {
-      if (!selectedConversation) return;
+      if (!selectedConversation || !userId) return;
       const res = await axios.get(
-        `${API_BASE}/api/messages/${user._id}/${selectedConversation._id}`
+        `${API_BASE}/api/messages/${userId}/${selectedConversation._id}`
       );
       setMessages(res.data);
     };
     fetchMessages();
-  }, [selectedConversation, API_BASE, user._id]);
+  }, [selectedConversation, API_BASE, userId]);
 
   // Fetch all users for composing
   const { data: users = [] } = useQuery({
@@ -73,12 +97,16 @@ export default function Messages() {
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["conversations", user._id] });
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: ["conversations", userId] });
+      }
       if (selectedConversation) {
         // Refetch messages for the selected conversation
-        axios
-          .get(`${API_BASE}/api/messages/${user._id}/${selectedConversation._id}`)
-          .then((res) => setMessages(res.data));
+        if (userId) {
+          axios
+            .get(`${API_BASE}/api/messages/${userId}/${selectedConversation._id}`)
+            .then((res) => setMessages(res.data));
+        }
       }
       setNewMessage("");
       setComposeOpen(false);
@@ -101,7 +129,7 @@ export default function Messages() {
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
     await sendMessageMutation.mutateAsync({
-      senderId: user._id,
+      senderId: userId,
       recipientId: selectedConversation._id,
       subject: "Re: " + (selectedConversation.lastMessage || "Message"),
       content: newMessage,
@@ -112,7 +140,7 @@ export default function Messages() {
   const handleCompose = async () => {
     if (!composeTo || !composeSubject || !composeMessage) return;
     await sendMessageMutation.mutateAsync({
-      senderId: user._id,
+      senderId: userId,
       recipientId: composeTo,
       subject: composeSubject,
       content: composeMessage,
@@ -167,16 +195,15 @@ export default function Messages() {
                     onClick={() =>
                       setSelectedConversation({
                         _id: conv._id,
-                        fullname: conv.fullname,
-                        email: conv.email,
+                        fullname: conv.fullname || conv.email || "Unknown",
+                        email: conv.email || "",
                         lastMessage: conv.lastMessage || "",
                         timestamp: conv.timestamp || null,
                         unread: conv.unread || 0,
-                        avatar: conv.fullname
+                        avatar: ((conv.fullname || conv.email || "U")
                           .split(" ")
                           .map((n) => n[0])
-                          .join("")
-                          .toUpperCase(),
+                          .join("") || "U").toUpperCase(),
                       })
                     }
                     className={`w-full text-left p-4 transition-colors duration-200 ${
@@ -188,17 +215,16 @@ export default function Messages() {
                     <div className="flex items-start gap-3">
                       <div className="w-10 h-10 bg-gradient-to-br from-[#00796B] to-[#004D40] rounded-full flex items-center justify-center flex-shrink-0">
                         <span className="text-white font-semibold text-sm">
-                          {conv.fullname
+                          {((conv.fullname || conv.email || "U")
                             .split(" ")
                             .map((n) => n[0])
-                            .join("")
-                            .toUpperCase()}
+                            .join("") || "U").toUpperCase()}
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
                           <h4 className="font-semibold text-[#37474F] truncate">
-                            {conv.fullname}
+                            {conv.fullname || conv.email || "Unknown"}
                           </h4>
                           {conv.unread > 0 && (
                             <Badge className="bg-[#00796B] text-white text-xs">
@@ -222,8 +248,9 @@ export default function Messages() {
                         onClick={async (e) => {
                           e.stopPropagation();
                           if (window.confirm("Delete this conversation?")) {
-                            await axios.delete(`${API_BASE}/api/messages/conversation/${user._id}/${conv._id}`);
-                            queryClient.invalidateQueries(["conversations", user._id]);
+                            if (!userId) return;
+                            await axios.delete(`${API_BASE}/api/messages/conversation/${userId}/${conv._id}`);
+                            queryClient.invalidateQueries(["conversations", userId]);
                             setSelectedConversation(null);
                           }
                         }}
@@ -345,8 +372,8 @@ export default function Messages() {
                   <SelectValue placeholder="Select recipient" />
                 </SelectTrigger>
                 <SelectContent>
-                  {users
-                    .filter((u) => u._id !== user._id)
+                          {users
+                    .filter((u) => (userId ? u._id !== userId : true))
                     .map((u) => (
                       <SelectItem key={u._id} value={u._id}>
                         {u.fullname} ({u.email})
