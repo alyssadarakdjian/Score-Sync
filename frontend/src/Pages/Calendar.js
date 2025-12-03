@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "../api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "../Components/ui/card";
@@ -34,6 +34,25 @@ export default function Calendar() {
   // Controls visibility of "Add Assignment" dialog
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
 
+  // Resolve userId from email
+  const [userId, setUserId] = useState(null);
+  useEffect(() => {
+    const fetchUserId = async () => {
+      const userEmail = localStorage.getItem('scoreSyncEmail');
+      if (!userEmail) return;
+      try {
+        const res = await fetch(`/api/auth/user?email=${encodeURIComponent(userEmail)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setUserId(data.user._id);
+        }
+      } catch (err) {
+        console.warn('Failed to resolve userId:', err.message);
+      }
+    };
+    fetchUserId();
+  }, []);
+
   /*
   ----------------------------------------------------------
   FETCH GRADE-BASED EVENTS (FROM Base44)
@@ -57,18 +76,10 @@ export default function Calendar() {
   These are generic events (meetings, exams, etc.) tied to the logged-in user.
   */
   const { data: events = [], refetch: refetchEvents } = useQuery({
-    queryKey: ['events'],
+    queryKey: ['events', userId],
     queryFn: async () => {
       try {
-        const userEmail = localStorage.getItem('scoreSyncEmail');
-        if (!userEmail) return [];
-        
-        // Get user ID
-        const userRes = await fetch(`/api/auth/user?email=${encodeURIComponent(userEmail)}`);
-        if (!userRes.ok) return [];
-        const userData = await userRes.json();
-        const userId = userData.user._id;
-        
+        if (!userId) return [];
         const res = await fetch(`/api/events/${userId}`);
         if (!res.ok) return [];
         return res.json();
@@ -77,6 +88,7 @@ export default function Calendar() {
         return [];
       }
     },
+    enabled: !!userId,
   });
 
   /*
@@ -86,18 +98,10 @@ export default function Calendar() {
   These assignments have due dates and can be marked done/undone.
   */
   const { data: assignments = [], refetch: refetchAssignments } = useQuery({
-    queryKey: ['assignments'],
+    queryKey: ['assignments', userId],
     queryFn: async () => {
       try {
-        const userEmail = localStorage.getItem('scoreSyncEmail');
-        if (!userEmail) return [];
-        
-        // Get user ID
-        const userRes = await fetch(`/api/auth/user?email=${encodeURIComponent(userEmail)}`);
-        if (!userRes.ok) return [];
-        const userData = await userRes.json();
-        const userId = userData.user._id;
-        
+        if (!userId) return [];
         const res = await fetch(`/api/assignments/${userId}`);
         if (!res.ok) return [];
         return res.json();
@@ -106,6 +110,7 @@ export default function Calendar() {
         return [];
       }
     },
+    enabled: !!userId,
   });
 
   /*
@@ -271,10 +276,14 @@ export default function Calendar() {
               <EventForm
                 onSubmit={async (eventData) => {
                   try {
+                    if (!userId) {
+                      console.warn('Cannot create event: userId not resolved');
+                      return;
+                    }
                     await fetch('/api/events', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ ...eventData, userId: 'demo-user' }),
+                      body: JSON.stringify({ ...eventData, userId }),
                     });
                     refetchEvents();
                     setShowDialog(false);
@@ -302,10 +311,14 @@ export default function Calendar() {
               <AssignmentForm
                 onSubmit={async (assignmentData) => {
                   try {
+                    if (!userId) {
+                      console.warn('Cannot create assignment: userId not resolved');
+                      return;
+                    }
                     await fetch('/api/assignments', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ ...assignmentData, userId: 'demo-user' }),
+                      body: JSON.stringify({ ...assignmentData, userId }),
                     });
                     refetchAssignments();
                     setShowAssignmentDialog(false);
