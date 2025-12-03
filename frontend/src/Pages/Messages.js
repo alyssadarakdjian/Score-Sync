@@ -32,12 +32,14 @@ export default function Messages() {
   const API_BASE = process.env.REACT_APP_API_URL;
   const cachedUser = JSON.parse(localStorage.getItem("user"));
   const cachedEmail = localStorage.getItem("scoreSyncEmail");
-  const [user, setUser] = useState(cachedUser || null);
+  const [user, setUser] = useState(
+    cachedUser && cachedUser.email === cachedEmail ? cachedUser : null
+  );
 
   // Resolve user from email if not present in localStorage
   useEffect(() => {
     const fetchUser = async () => {
-      if (user || !cachedEmail) return;
+      if ((user && user.email === cachedEmail) || !cachedEmail) return;
       try {
         const res = await axios.get(`/api/auth/user?email=${encodeURIComponent(cachedEmail)}`);
         if (res.data && res.data.user) {
