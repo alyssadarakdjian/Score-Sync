@@ -49,7 +49,7 @@ export default function AdminLogin({ onLogin, msg, onBackToStudent }) {
           className="text-sm text-blue-600 hover:underline"
           onClick={onBackToStudent}
         >
-          Back to Student Login
+          Back to Student Login 
         </button>
       </div>
     </div>

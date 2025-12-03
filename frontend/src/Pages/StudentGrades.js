@@ -116,8 +116,8 @@ export default function StudentGrades() {
     },
   });
 
-  const handleAddGradeItem = (e) => {
-    e.preventDefault();
+  const handleAddGradeItem(e = {}) {
+    e.preventDefault?.();
     if (newGradeName && newGradeScore) {
       addGradeItemMutation.mutate({
         name: newGradeName,
@@ -126,7 +126,7 @@ export default function StudentGrades() {
         weight: parseFloat(newGradeWeight)
       });
     }
-  };
+  }
 
   const handleDeleteItem = (itemId) => {
     if (window.confirm('Delete this grade item?')) {
