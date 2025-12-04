@@ -1,10 +1,10 @@
-import React, { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "../Components/ui/card";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Plus, Save, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "../Components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../Components/ui/card";
 import { Input } from "../Components/ui/input";
-import { ArrowLeft, Plus, Trash2, Save } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../Components/ui/table";
 
 export default function StudentGrades() {
@@ -116,8 +116,8 @@ export default function StudentGrades() {
     },
   });
 
-  const handleAddGradeItem(e = {}) {
-    e.preventDefault?.();
+  const handleAddGradeItem = (e) => {
+    e.preventDefault();
     if (newGradeName && newGradeScore) {
       addGradeItemMutation.mutate({
         name: newGradeName,
@@ -126,7 +126,7 @@ export default function StudentGrades() {
         weight: parseFloat(newGradeWeight)
       });
     }
-  }
+  };
 
   const handleDeleteItem = (itemId) => {
     if (window.confirm('Delete this grade item?')) {
